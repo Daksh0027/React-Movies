@@ -1,13 +1,16 @@
-import React from 'react'
+import React from 'react';
 
-const MovieCard = ({ movie:
-  { title, vote_average, poster_path, release_date, original_language }
-}) => {
+const MovieCard = ({ movie, onClick }) => {
+  // Destructure properties inside the component for clarity
+  const { title, vote_average, poster_path, release_date, original_language } = movie;
+
   return (
-    <div className="movie-card">
+    // Add the onClick handler and cursor style here
+    <div className="movie-card cursor-pointer" onClick={onClick}>
       <img
+        // Ensure this path matches your file in the 'public' folder
         src={poster_path ?
-          `https://image.tmdb.org/t/p/w500/${poster_path}` : '/no-movie.png'}
+          `https://image.tmdb.org/t/p/w500/${poster_path}` : '/No-Poster.png'}
         alt={title}
       />
 
@@ -16,7 +19,7 @@ const MovieCard = ({ movie:
 
         <div className="content">
           <div className="rating">
-            <img src="star.svg" alt="Star Icon" />
+            <img src="/star.svg" alt="Rating" />
             <p>{vote_average ? vote_average.toFixed(1) : 'N/A'}</p>
           </div>
 
@@ -30,6 +33,7 @@ const MovieCard = ({ movie:
         </div>
       </div>
     </div>
-  )
-}
-export default MovieCard
+  );
+};
+
+export default MovieCard;

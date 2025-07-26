@@ -1,24 +1,25 @@
-import { useEffect, useState } from 'react'
-import Search from './components/Search.jsx'
-import Spinner from './components/Spinner.jsx'
-import MovieCard from './components/MovieCard.jsx'
-import { useDebounce } from 'react-use'
-import { getTrendingMovies, updateSearchCount } from './appwrite.js'
+import { useEffect, useState } from 'react';
+import Search from './components/Search.jsx';
+import Spinner from './components/Spinner.jsx';
+import MovieCard from './components/MovieCard.jsx';
+import ExpandedCard from './components/ExpandedCard.jsx';
+import { useDebounce } from 'react-use';
+import { getTrendingMovies, updateSearchCount } from './appwrite.js';
 
 const API_BASE_URL = 'https://api.themoviedb.org/3';
-
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
+// This is the correct options object that works with your v4 token.
 const API_OPTIONS = {
   method: 'GET',
   headers: {
     accept: 'application/json',
     Authorization: `Bearer ${API_KEY}`
   }
-}
+};
 
 const App = () => {
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
   const [movieList, setMovieList] = useState([]);
@@ -26,10 +27,9 @@ const App = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const [trendingMovies, setTrendingMovies] = useState([]);
+  const [selectedMovieId, setSelectedMovieId] = useState(null);
 
-  // Debounce the search term to prevent making too many API requests
-  // by waiting for the user to stop typing for 500ms
-  useDebounce(() => setDebouncedSearchTerm(searchTerm), 500, [searchTerm])
+  useDebounce(() => setDebouncedSearchTerm(searchTerm), 500, [searchTerm]);
 
   const fetchMovies = async (query = '') => {
     setIsLoading(true);
@@ -40,42 +40,50 @@ const App = () => {
         ? `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}`
         : `${API_BASE_URL}/discover/movie?sort_by=popularity.desc`;
 
+      // Using the fetch method with the Authorization header.
       const response = await fetch(endpoint, API_OPTIONS);
 
-      if(!response.ok) {
-        throw new Error('Failed to fetch movies');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.status_message || 'Failed to fetch movies');
       }
 
       const data = await response.json();
 
-      if(data.Response === 'False') {
-        setErrorMessage(data.Error || 'Failed to fetch movies');
-        setMovieList([]);
-        return;
+      if (data.results.length === 0) {
+        setErrorMessage('No movies found for your search.');
       }
 
       setMovieList(data.results || []);
 
-      if(query && data.results.length > 0) {
+      if (query && data.results.length > 0) {
         await updateSearchCount(query, data.results[0]);
       }
     } catch (error) {
       console.error(`Error fetching movies: ${error}`);
-      setErrorMessage('Error fetching movies. Please try again later.');
+      setErrorMessage(error.message || 'Error fetching movies. Please try again later.');
+      setMovieList([]);
     } finally {
       setIsLoading(false);
     }
-  }
+  };
 
   const loadTrendingMovies = async () => {
     try {
       const movies = await getTrendingMovies();
-
       setTrendingMovies(movies);
     } catch (error) {
       console.error(`Error fetching trending movies: ${error}`);
     }
-  }
+  };
+
+  const handleMovieClick = (id) => {
+    setSelectedMovieId(id);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedMovieId(null);
+  };
 
   useEffect(() => {
     fetchMovies(debouncedSearchTerm);
@@ -87,20 +95,17 @@ const App = () => {
 
   return (
     <main>
-      <div className="pattern"/>
-
+      <div className="pattern" />
       <div className="wrapper">
         <header>
           <img src="./hero.png" alt="Hero Banner" />
           <h1>Find <span className="text-gradient">Movies</span> You'll Enjoy Without the Hassle</h1>
-
           <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
         </header>
 
         {trendingMovies.length > 0 && (
           <section className="trending">
             <h2>Trending Movies</h2>
-
             <ul>
               {trendingMovies.map((movie, index) => (
                 <li key={movie.$id}>
@@ -114,22 +119,34 @@ const App = () => {
 
         <section className="all-movies">
           <h2>All Movies</h2>
-
           {isLoading ? (
             <Spinner />
           ) : errorMessage ? (
-            <p className="text-red-500">{errorMessage}</p>
+            <p className="error-message">{errorMessage}</p>
           ) : (
             <ul>
               {movieList.map((movie) => (
-                <MovieCard key={movie.id} movie={movie} />
+                <MovieCard
+                  key={movie.id}
+                  movie={movie}
+                  onClick={() => handleMovieClick(movie.id)}
+                />
               ))}
             </ul>
           )}
         </section>
+
+        {/* We pass the key as a prop to ensure it gets to the child component reliably */}
+        {selectedMovieId && (
+          <ExpandedCard 
+            movieId={selectedMovieId} 
+            apiKey={API_KEY} 
+            onClose={handleCloseModal} 
+          />
+        )}
       </div>
     </main>
-  )
-}
+  );
+};
 
-export default App
+export default App;
