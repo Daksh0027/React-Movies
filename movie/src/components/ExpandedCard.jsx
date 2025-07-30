@@ -25,23 +25,27 @@ const ExpandedCard = ({ movieId, apiKey, onClose }) => {
   const [trailer, setTrailer] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // New state to manage the embedded video player
+  const [playTrailer, setPlayTrailer] = useState(false);
 
   useEffect(() => {
     // Prevent background scrolling when the modal is open
     document.body.style.overflow = 'hidden';
 
     const fetchMovieDetails = async () => {
-      // Check if the apiKey prop was passed down
+      // Reset states for new movie
+      setIsLoading(true);
+      setError(null);
+      setPlayTrailer(false);
+
       if (!apiKey) {
         setError("API key is missing.");
         setIsLoading(false);
         return;
       }
 
-      setIsLoading(true);
-      setError(null);
       try {
-        // This is the correct options object that works with your key.
         const API_OPTIONS = {
           method: 'GET',
           headers: {
@@ -50,10 +54,9 @@ const ExpandedCard = ({ movieId, apiKey, onClose }) => {
           }
         };
 
-        // The URL does not contain the api_key parameter.
         const response = await fetch(
           `https://api.themoviedb.org/3/movie/${movieId}?append_to_response=videos,credits`,
-          API_OPTIONS // We pass the authorization header here.
+          API_OPTIONS
         );
         
         if (!response.ok) {
@@ -64,7 +67,6 @@ const ExpandedCard = ({ movieId, apiKey, onClose }) => {
         const data = await response.json();
         setMovie(data);
 
-        // Find the official trailer from the videos response
         const officialTrailer = data.videos?.results.find(
           (video) => video.site === 'YouTube' && video.type === 'Trailer'
         );
@@ -86,9 +88,8 @@ const ExpandedCard = ({ movieId, apiKey, onClose }) => {
     return () => {
       document.body.style.overflow = 'auto';
     };
-  }, [movieId, apiKey]); // Dependency array includes apiKey
+  }, [movieId, apiKey]);
 
-  // Prevents modal from closing when clicking inside the content
   const handleContentClick = (e) => e.stopPropagation();
 
   if (isLoading) {
@@ -117,8 +118,9 @@ const ExpandedCard = ({ movieId, apiKey, onClose }) => {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 backdrop-blur-sm p-4"
       onClick={onClose}
     >
+      {/* Modal content */}
       <div
-        className="relative w-full max-w-5xl max-h-[90vh] overflow-y-auto bg-[#040f39] rounded-2xl text-white p-6 md:p-8 border border-slate-800"
+        className="relative w-full max-w-5xl max-h-[90vh] overflow-y-auto bg-[#0F0D23] drop-shadow-amber-800 rounded-2xl text-white p-6 md:p-8 border border-slate-800"
         onClick={handleContentClick}
       >
         <button
@@ -162,24 +164,44 @@ const ExpandedCard = ({ movieId, apiKey, onClose }) => {
                   className="rounded-lg w-full shadow-lg"
                 />
               </div>
-              <div className="md:col-span-2 relative">
-                <img
-                  src={movie.backdrop_path ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}` : '/No-Poster.png'}
-                  alt={`Backdrop for ${movie.title}`}
-                  className="rounded-lg w-full shadow-lg"
-                />
-                {trailer && (
-                  <a
-                    href={`https://www.youtube.com/watch?v=${trailer.key}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 hover:bg-opacity-20 transition-all rounded-lg"
-                  >
-                    <div className="flex items-center space-x-3 bg-white/20 backdrop-blur-md px-6 py-3 rounded-full">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
-                      <span className="text-white font-semibold">Trailer</span>
-                    </div>
-                  </a>
+              {/* === TRAILER SECTION: UPDATED LOGIC === */}
+              <div className="md:col-span-2 relative aspect-video bg-slate-900 rounded-lg bg-cover bg-center" style={{backgroundImage: `url(https://image.tmdb.org/t/p/w1280${movie.backdrop_path})`}}>
+                {trailer && !playTrailer && (
+                  <>
+                    <img
+                      src={`https://img.youtube.com/vi/${trailer.key}/maxresdefault.jpg`}
+                      onError={(e) => { e.currentTarget.src = `https://img.youtube.com/vi/${trailer.key}/hqdefault.jpg`; }}
+                      alt="Trailer thumbnail"
+                      className="absolute inset-0 w-full h-full object-cover rounded-lg"
+                    />
+                    <button
+                      onClick={() => setPlayTrailer(true)}
+                      className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 hover:bg-opacity-20 transition-all rounded-lg"
+                      aria-label="Play trailer"
+                    >
+                      <div className="flex items-center space-x-3 bg-white/20 backdrop-blur-md px-6 py-3 rounded-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                        <span className="text-white font-semibold">Trailer</span>
+                      </div>
+                    </button>
+                  </>
+                )}
+                {trailer && playTrailer && (
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    src={`https://www.youtube.com/embed/${trailer.key}?autoplay=1&rel=0`}
+                    title="YouTube video player"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="rounded-lg"
+                  ></iframe>
+                )}
+                {!trailer && (
+                  <div className="flex items-center justify-center h-full text-gray-500">
+                    No trailer available
+                  </div>
                 )}
               </div>
             </div>
@@ -192,7 +214,7 @@ const ExpandedCard = ({ movieId, apiKey, onClose }) => {
                   ))}
                 </div>
                 <h3 className="text-xl font-semibold mb-2">Overview</h3>
-                <p className="text-white-300 mb-6">{movie.overview}</p>
+                <p className="text-gray-300 mb-6">{movie.overview}</p>
                 {movie.homepage && (
                   <a href={movie.homepage} target="_blank" rel="noopener noreferrer" className="inline-block px-6 py-3 bg-violet-600 hover:bg-violet-700 rounded-lg font-semibold transition-colors">
                     Visit Homepage
@@ -200,11 +222,11 @@ const ExpandedCard = ({ movieId, apiKey, onClose }) => {
                 )}
               </div>
               <div className="md:col-span-1 space-y-3 text-sm">
-                <div><strong className="text-violet-300 block">Status</strong> {movie.status}</div>
-                <div><strong className="text-violet-300 block">Release Date</strong> {movie.release_date}</div>
-                <div><strong className="text-violet-300 block">Budget</strong> {formatCurrency(movie.budget)}</div>
-                <div><strong className="text-violet-300 block">Revenue</strong> {formatCurrency(movie.revenue)}</div>
-                <div><strong className="text-violet-300 block">Production</strong> {movie.production_companies.map(c => c.name).join(', ')}</div>
+                <div><strong className="text-gray-400 block">Status</strong> {movie.status}</div>
+                <div><strong className="text-gray-400 block">Release Date</strong> {movie.release_date}</div>
+                <div><strong className="text-gray-400 block">Budget</strong> {formatCurrency(movie.budget)}</div>
+                <div><strong className="text-gray-400 block">Revenue</strong> {formatCurrency(movie.revenue)}</div>
+                <div><strong className="text-gray-400 block">Production</strong> {movie.production_companies.map(c => c.name).join(', ')}</div>
               </div>
             </div>
           </>
