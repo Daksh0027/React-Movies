@@ -23,6 +23,7 @@ const App = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const [movieList, setMovieList] = useState([]);
+  const [seriesList, setSeriesList] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -39,7 +40,6 @@ const App = () => {
       const endpoint = query
         ? `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}`
         : `${API_BASE_URL}/discover/movie?sort_by=popularity.desc`;
-
       // Using the fetch method with the Authorization header.
       const response = await fetch(endpoint, API_OPTIONS);
 
@@ -99,13 +99,13 @@ const App = () => {
       <div className="wrapper">
         <header>
           <img src="./hero.png" alt="Hero Banner" />
-          <h1>Find <span className="text-gradient">Movies</span> You'll Enjoy Without the Hassle</h1>
+          <h1>Find <span className="text-gradient">Movies And Series</span> You'll Enjoy Without the Hassle</h1>
           <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
         </header>
 
         {trendingMovies.length > 0 && (
           <section className="trending">
-            <h2>Trending Movies</h2>
+            <h2><span className='text-gradient'>Suggested </span></h2>
             <ul>
               {trendingMovies.map((movie, index) => (
                 <li key={movie.$id}>
@@ -118,7 +118,7 @@ const App = () => {
         )}
 
         <section className="all-movies">
-          <h2>All Movies</h2>
+          <h1><span className='text-gradient'>New In Town</span></h1>
           {isLoading ? (
             <Spinner />
           ) : errorMessage ? (
