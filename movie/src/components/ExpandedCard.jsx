@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import Spinner from './Spinner';
+ import Spinner from './Spinner';
 
-// Helper functions to format data
+// data formatting
 const formatCurrency = (number) => {
   if (number > 0) {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 0,
-    }).format(number);
-  }
-  return 'N/A';
+    }).format(number); 
+  }    return 'N/A';
 };
 
 const formatRuntime = (minutes) => {
@@ -22,24 +21,21 @@ const formatRuntime = (minutes) => {
 
 const ExpandedCard = ({ movieId, apiKey, onClose }) => {
   const [movie, setMovie] = useState(null);
-  const [trailer, setTrailer] = useState(null);
+  const [imdbId, setImdbId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  // New state to manage the embedded video player
-  const [playTrailer, setPlayTrailer] = useState(false);
 
   useEffect(() => {
-    // Prevent background scrolling when the modal is open
+    // Prevent background scrolling when the modal(expanded card) is open
     document.body.style.overflow = 'hidden';
 
     const fetchMovieDetails = async () => {
       // Reset states for new movie
-      setIsLoading(true);
-      setError(null);
-      setPlayTrailer(false);
+      setIsLoading(true); //reset loading state
+      setError(null); // reset error state
+      setImdbId(null); // reset IMDb ID
 
-      if (!apiKey) {
+      if (!apiKey) { 
         setError("API key is missing.");
         setIsLoading(false);
         return;
@@ -54,26 +50,39 @@ const ExpandedCard = ({ movieId, apiKey, onClose }) => {
           }
         };
 
+        // Fetch movie details
         const response = await fetch(
-          `https://api.themoviedb.org/3/movie/${movieId}?append_to_response=videos,credits`,
+          `https://api.themoviedb.org/3/movie/${movieId}?append_to_response=credits`, // append_to_response=credits to get cast and crew
           API_OPTIONS
         );
-        
+
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.status_message || 'Movie details could not be fetched.');
         }
 
-        const data = await response.json();
-        setMovie(data);
+        const movieData = await response.json();
+        setMovie(movieData);
 
-        const officialTrailer = data.videos?.results.find(
-          (video) => video.site === 'YouTube' && video.type === 'Trailer'
+        // Fetch external IDs to get IMDb ID
+        const externalIdsResponse = await fetch(
+          `https://api.themoviedb.org/3/movie/${movieId}/external_ids`,
+          API_OPTIONS
         );
-        setTrailer(officialTrailer);
+
+        if (!externalIdsResponse.ok) {
+          const errorData = await externalIdsResponse.json();
+          // Log error but don't block the movie details display if IMDb ID fetch fails
+          console.error("Error fetching external IDs:", errorData.status_message || 'Could not fetch external IDs.');
+        } else {
+          const externalIdsData = await externalIdsResponse.json();
+          if (externalIdsData.imdb_id) { // if successfully fetched IMDb ID change state 
+            setImdbId(externalIdsData.imdb_id);
+          }
+        }
 
       } catch (err) {
-        console.error("Error fetching movie details:", err);
+        console.error("Error fetching movie details or external IDs:", err);
         setError(err.message);
       } finally {
         setIsLoading(false);
@@ -84,7 +93,7 @@ const ExpandedCard = ({ movieId, apiKey, onClose }) => {
       fetchMovieDetails();
     }
 
-    // Cleanup function to re-enable scrolling when the component unmounts
+    // unlock scroll after collapsing the expanded card
     return () => {
       document.body.style.overflow = 'auto';
     };
@@ -118,7 +127,7 @@ const ExpandedCard = ({ movieId, apiKey, onClose }) => {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 backdrop-blur-sm p-4"
       onClick={onClose}
     >
-      {/* Modal content */}
+      {/* Card Components */}
       <div
         className="relative w-full max-w-5xl max-h-[90vh] overflow-y-auto bg-[#0F0D23] drop-shadow-amber-800 rounded-2xl text-white p-6 md:p-8 border border-slate-800"
         onClick={handleContentClick}
@@ -138,7 +147,7 @@ const ExpandedCard = ({ movieId, apiKey, onClose }) => {
                 <div className="flex items-center space-x-3 text-gray-400 mt-2">
                   <span>{movie.release_date?.substring(0, 4)}</span>
                   <span>•</span>
-                  <span>PG-13</span>
+                  <span>PG-13</span> {/* actual rating kon lae ab yahi theek hai */}
                   <span>•</span>
                   <span>{formatRuntime(movie.runtime)}</span>
                 </div>
@@ -146,10 +155,10 @@ const ExpandedCard = ({ movieId, apiKey, onClose }) => {
               <div className="flex items-center space-x-4 mt-4 md:mt-0 flex-shrink-0">
                 <div className="flex items-center space-x-2 bg-slate-800/50 px-3 py-1 rounded-full">
                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                  <span className="text-xl font-semibold">{movie.vote_average.toFixed(1)}</span>
-                  <span className="text-sm text-gray-400">({movie.vote_count})</span>
+                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                   </svg>
+                   <span className="text-xl font-semibold">{movie.vote_average.toFixed(1)}</span>
+                   <span className="text-sm text-gray-400">({movie.vote_count})</span>
                 </div>
                 <button className="w-10 h-10 bg-slate-800/50 rounded-full flex items-center justify-center hover:bg-slate-700 transition-colors">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
@@ -159,48 +168,30 @@ const ExpandedCard = ({ movieId, apiKey, onClose }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-6">
               <div className="md:col-span-1">
                 <img
-                  src={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : '/No-Poster.png'}
+                  src={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'https://placehold.co/500x750/1A1A1A/FFFFFF?text=No+Poster'}
                   alt={`Poster for ${movie.title}`}
                   className="rounded-lg w-full shadow-lg"
+                  onError={(e) => { e.currentTarget.src = 'https://placehold.co/500x750/1A1A1A/FFFFFF?text=No+Poster'; }}
                 />
               </div>
-              {/* === TRAILER SECTION: UPDATED LOGIC === */}
-              <div className="md:col-span-2 relative aspect-video bg-slate-900 rounded-lg bg-cover bg-center" style={{backgroundImage: `url(https://image.tmdb.org/t/p/w1280${movie.backdrop_path})`}}>
-                {trailer && !playTrailer && (
+              {/* Play IMDB SECTION */}
+              <div className="md:col-span-2 relative aspect-video bg-slate-900 rounded-lg flex flex-col items-center justify-center overflow-hidden">
+                {imdbId ? (
                   <>
-                    <img
-                      src={`https://img.youtube.com/vi/${trailer.key}/maxresdefault.jpg`}
-                      onError={(e) => { e.currentTarget.src = `https://img.youtube.com/vi/${trailer.key}/hqdefault.jpg`; }}
-                      alt="Trailer thumbnail"
-                      className="absolute inset-0 w-full h-full object-cover rounded-lg"
-                    />
-                    <button
-                      onClick={() => setPlayTrailer(true)}
-                      className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 hover:bg-opacity-20 transition-all rounded-lg"
-                      aria-label="Play trailer"
-                    >
-                      <div className="flex items-center space-x-3 bg-white/20 backdrop-blur-md px-6 py-3 rounded-full">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
-                        <span className="text-white font-semibold">Trailer</span>
-                      </div>
-                    </button>
+                    <iframe
+                      src={`https://m.playimdb.com/title/${imdbId}/`} //tt handled 
+                      title={`IMDb page for ${movie.title}`}
+                      frameBorder="0"
+                      allowFullScreen
+                      className="w-full h-full rounded-lg"
+                    ></iframe>
+                    <div className="text-sm text-gray-400 mt-2">
+                      If Wrong Movie Plays Click On The Top Left Corner Of The Player And Change Server
+                    </div>
                   </>
-                )}
-                {trailer && playTrailer && (
-                  <iframe
-                    width="100%"
-                    height="100%"
-                    src={`https://www.youtube.com/embed/${trailer.key}?autoplay=1&rel=0`}
-                    title="YouTube video player"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    className="rounded-lg"
-                  ></iframe>
-                )}
-                {!trailer && (
+                ) : (
                   <div className="flex items-center justify-center h-full text-gray-500">
-                    No trailer available
+                    IMDb link not available
                   </div>
                 )}
               </div>
