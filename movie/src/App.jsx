@@ -9,7 +9,6 @@ import { getTrendingMovies, updateSearchCount } from './appwrite.js';
 const API_BASE_URL = 'https://api.themoviedb.org/3';
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
-// This is the correct options object that works with your v4 token.
 const API_OPTIONS = {
   method: 'GET',
   headers: {
@@ -22,51 +21,71 @@ const App = () => {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const [movieList, setMovieList] = useState([]);
-  const [seriesList, setSeriesList] = useState([]);
+  // Renamed from movieList to mediaList to reflect movies and series
+  const [mediaList, setMediaList] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const [trendingMovies, setTrendingMovies] = useState([]);
-  const [selectedMovieId, setSelectedMovieId] = useState(null);
+  
+  // Changed state to hold an object with id and media type
+  const [selectedMedia, setSelectedMedia] = useState(null);
 
   useDebounce(() => setDebouncedSearchTerm(searchTerm), 500, [searchTerm]);
 
-  const fetchMovies = async (query = '') => {
+  // This function now fetches both movies and TV series
+  const fetchData = async (query = '') => {
     setIsLoading(true);
     setErrorMessage('');
 
     try {
-      const endpoint = query
+      const movieEndpoint = query
         ? `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}`
         : `${API_BASE_URL}/discover/movie?sort_by=popularity.desc`;
-      // Using the fetch method with the Authorization header.
-      const response = await fetch(endpoint, API_OPTIONS);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.status_message || 'Failed to fetch movies');
+      const seriesEndpoint = query
+        ? `${API_BASE_URL}/search/tv?query=${encodeURIComponent(query)}`
+        : `${API_BASE_URL}/tv/top_rated?language=en-US&page=1`; // sort by popularity descending is dumb
+
+      // Fetch both movies and series in parallel
+      const [movieResponse, seriesResponse] = await Promise.all([
+        fetch(movieEndpoint, API_OPTIONS),
+        fetch(seriesEndpoint, API_OPTIONS)
+      ]);
+
+      if (!movieResponse.ok || !seriesResponse.ok) {
+        throw new Error('Failed to fetch data from TMDB.');
       }
 
-      const data = await response.json();
+      const movieData = await movieResponse.json();
+      const seriesData = await seriesResponse.json();
+      
+      // Add a 'media_type' to each object to identify it later
+      const movies = movieData.results.map(item => ({ ...item, media_type: 'movie' }));
+      const series = seriesData.results.map(item => ({ ...item, media_type: 'tv' }));
 
-      if (data.results.length === 0) {
-        setErrorMessage('No movies found for your search.');
+      // Combine and sort the results by popularity
+      const combinedResults = [...movies, ...series]
+        .sort((a, b) => b.popularity - a.popularity);
+
+      if (combinedResults.length === 0) {
+        setErrorMessage('No movies or series found for your search.');
       }
+      
+      setMediaList(combinedResults);
 
-      setMovieList(data.results || []);
-
-      if (query && data.results.length > 0) {
-        await updateSearchCount(query, data.results[0]);
+      if (query && combinedResults.length > 0) {
+        await updateSearchCount(query, combinedResults[0]);
       }
     } catch (error) {
-      console.error(`Error fetching movies: ${error}`);
-      setErrorMessage(error.message || 'Error fetching movies. Please try again later.');
-      setMovieList([]);
+      console.error(`Error fetching data: ${error}`);
+      setErrorMessage(error.message || 'Error fetching data. Please try again later.');
+      setMediaList([]);
     } finally {
       setIsLoading(false);
     }
   };
+
 
   const loadTrendingMovies = async () => {
     try {
@@ -77,16 +96,17 @@ const App = () => {
     }
   };
 
-  const handleMovieClick = (id) => {
-    setSelectedMovieId(id);
+  // Updated handler to accept the full media object
+  const handleMediaClick = (media) => {
+    setSelectedMedia({ id: media.id, type: media.media_type });
   };
 
   const handleCloseModal = () => {
-    setSelectedMovieId(null);
+    setSelectedMedia(null);
   };
 
   useEffect(() => {
-    fetchMovies(debouncedSearchTerm);
+    fetchData(debouncedSearchTerm);
   }, [debouncedSearchTerm]);
 
   useEffect(() => {
@@ -118,28 +138,29 @@ const App = () => {
         )}
 
         <section className="all-movies">
-          <h1><span className='text-gradient'>New In Town</span></h1>
+          <h1><span className='text-gradient'>Top Rated Movies And Shows</span></h1>
           {isLoading ? (
             <Spinner />
           ) : errorMessage ? (
             <p className="error-message">{errorMessage}</p>
           ) : (
             <ul>
-              {movieList.map((movie) => (
+              {mediaList.map((media) => (
                 <MovieCard
-                  key={movie.id}
-                  movie={movie}
-                  onClick={() => handleMovieClick(movie.id)}
+                  key={`${media.media_type}-${media.id}`}
+                  media={media}
+                  onClick={() => handleMediaClick(media)}
                 />
               ))}
             </ul>
           )}
         </section>
 
-        {/* We pass the key as a prop to ensure it gets to the child component reliably */}
-        {selectedMovieId && (
+        {/* Pass media ID and type and API Key to the childern(ExpandedCard.jsx) */}
+        {selectedMedia && (
           <ExpandedCard 
-            movieId={selectedMovieId} 
+            mediaId={selectedMedia.id}
+            mediaType={selectedMedia.type} 
             apiKey={API_KEY} 
             onClose={handleCloseModal} 
           />

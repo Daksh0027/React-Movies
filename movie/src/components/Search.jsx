@@ -8,7 +8,7 @@ const Search = ({ searchTerm, setSearchTerm }) => {
 
         <input
           type="text"
-          placeholder="Search through thousands of movies"
+          placeholder="Search through thousands of movies and series"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />

@@ -1,14 +1,15 @@
 import React from 'react';
 
-const MovieCard = ({ movie, onClick }) => {
-  // Destructure properties inside the component for clarity
-  const { title, vote_average, poster_path, release_date, original_language } = movie;
+// Renamed 'movie' prop to 'media' for clarity
+const MovieCard = ({ media, onClick }) => {
+  // Destructure properties, handling differences between movies and TV series
+  const { vote_average, poster_path, original_language } = media;
+  const title = media.title || media.name; // Use title for movies, name for series
+  const releaseDate = media.release_date || media.first_air_date; // Use release_date for movies, first_air_date for series
 
   return (
-    // Add the onClick handler and cursor style here
     <div className="movie-card cursor-pointer" onClick={onClick}>
       <img
-        // Ensure this path matches your file in the 'public' folder
         src={poster_path ?
           `https://image.tmdb.org/t/p/w500/${poster_path}` : '/No-Poster.png'}
         alt={title}
@@ -28,7 +29,7 @@ const MovieCard = ({ movie, onClick }) => {
 
           <span>•</span>
           <p className="year">
-            {release_date ? release_date.split('-')[0] : 'N/A'}
+            {releaseDate ? releaseDate.split('-')[0] : 'N/A'}
           </p>
         </div>
       </div>
