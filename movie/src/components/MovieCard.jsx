@@ -1,12 +1,8 @@
-import React from 'react';
-
-// Renamed 'movie' prop to 'media' for clarity
 const MovieCard = ({ media, onClick }) => {
   // Destructure properties, handling differences between movies and TV series
   const { vote_average, poster_path, original_language } = media;
-  const title = media.title || media.name; // Use title for movies, name for series
-  const releaseDate = media.release_date || media.first_air_date; // Use release_date for movies, first_air_date for series
-
+  const title = media.title || media.name;
+  const releaseDate = media.release_date || media.first_air_date; // if movie release date or series first air date 
   return (
     <div className="movie-card cursor-pointer" onClick={onClick}>
       <img

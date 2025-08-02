@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Spinner from './Spinner';
+import axios from 'axios';
 
 // Helper functions (no changes)
 const formatCurrency = (number) => {
@@ -42,21 +43,22 @@ const ExpandedCard = ({ mediaId, mediaType, apiKey, onClose }) => {
         return;
       }
       try {
-        const API_OPTIONS = { method: 'GET', headers: { accept: 'application/json', Authorization: `Bearer ${apiKey}` } };
+        const API_HEADERS = {
+          accept: 'application/json',
+          Authorization: `Bearer ${apiKey}`
+        };
         const url = `https://api.themoviedb.org/3/${mediaType}/${mediaId}?append_to_response=credits,external_ids`;
-        const response = await fetch(url, API_OPTIONS);
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.status_message || 'Details could not be fetched.');
-        }
-        const data = await response.json();
+        const response = await axios(url,{headers : API_HEADERS} );
+
+        const data = response.data;
         setDetails(data);
         if (data.external_ids?.imdb_id) {
           setImdbId(data.external_ids.imdb_id);
         }
       } catch (err) {
-        console.error("Error fetching details:", err);
-        setError(err.message);
+        const message = err.response?.data?.status_message || err.message;
+        console.error("Error fetching details:", message);
+        setError(message);
       } finally {
         setIsLoading(false);
       }
@@ -71,8 +73,8 @@ const ExpandedCard = ({ mediaId, mediaType, apiKey, onClose }) => {
 
   // Loading and Error states (no changes)
   const handleContentClick = (e) => e.stopPropagation();
-  if (isLoading) { /* ... same loading spinner JSX ... */ }
-  if (error) { /* ... same error message JSX ... */ }
+  if (isLoading) { return <Spinner />}
+  if (error) { return <div className="text-bg : bg-red-600">{error}</div>; }
 
   // Data extraction for easier use in JSX (no changes)
   const title = details?.title || details?.name;

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import axios from 'axios';
 import Search from './components/Search.jsx';
 import Spinner from './components/Spinner.jsx';
 import MovieCard from './components/MovieCard.jsx';
@@ -9,12 +10,9 @@ import { getTrendingMovies, updateSearchCount } from './appwrite.js';
 const API_BASE_URL = 'https://api.themoviedb.org/3';
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
-const API_OPTIONS = {
-  method: 'GET',
-  headers: {
-    accept: 'application/json',
-    Authorization: `Bearer ${API_KEY}`
-  }
+const API_HEADERS = {
+  accept: 'application/json',
+  Authorization: `Bearer ${API_KEY}`
 };
 
 const App = () => {
@@ -47,22 +45,15 @@ const App = () => {
         ? `${API_BASE_URL}/search/tv?query=${encodeURIComponent(query)}`
         : `${API_BASE_URL}/tv/top_rated?language=en-US&page=1`; // sort by popularity descending is dumb
 
-      // Fetch both movies and series in parallel
-      const [movieResponse, seriesResponse] = await Promise.all([
-        fetch(movieEndpoint, API_OPTIONS),
-        fetch(seriesEndpoint, API_OPTIONS)
+      // axios both movies and series together 
+      const [movieResponse, seriesResponse] = await Promise.all([ /* Promise.all for multiple request */
+        axios.get(movieEndpoint,{headers: API_HEADERS}),
+        axios.get(seriesEndpoint, {headers : API_HEADERS})
       ]);
-
-      if (!movieResponse.ok || !seriesResponse.ok) {
-        throw new Error('Failed to fetch data from TMDB.');
-      }
-
-      const movieData = await movieResponse.json();
-      const seriesData = await seriesResponse.json();
       
       // Add a 'media_type' to each object to identify it later
-      const movies = movieData.results.map(item => ({ ...item, media_type: 'movie' }));
-      const series = seriesData.results.map(item => ({ ...item, media_type: 'tv' }));
+      const movies = movieResponse.data.results.map(item => ({ ...item, media_type: 'movie' }));
+      const series = seriesResponse.data.results.map(item => ({ ...item, media_type: 'tv' }));
 
       // Combine and sort the results by popularity
       const combinedResults = [...movies, ...series]
@@ -78,8 +69,10 @@ const App = () => {
         await updateSearchCount(query, combinedResults[0]);
       }
     } catch (error) {
-      console.error(`Error fetching data: ${error}`);
-      setErrorMessage(error.message || 'Error fetching data. Please try again later.');
+      // Axios provides more detailed error info
+      const message = error.response?.data?.status_message || error.message || 'Error fetching data.';
+      console.error(`Error fetching data: ${message}`);
+      setErrorMessage(message);
       setMediaList([]);
     } finally {
       setIsLoading(false);
