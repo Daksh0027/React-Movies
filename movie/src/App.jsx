@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
+import Navbar from './components/Navbar.jsx';
 import Search from './components/Search.jsx';
 import Spinner from './components/Spinner.jsx';
 import MovieCard from './components/MovieCard.jsx';
@@ -29,7 +30,7 @@ const App = () => {
   // Changed state to hold an object with id and media type
   const [selectedMedia, setSelectedMedia] = useState(null);
 
-  useDebounce(() => setDebouncedSearchTerm(searchTerm), 500, [searchTerm]);
+  useDebounce(() => setDebouncedSearchTerm(searchTerm), 1000, [searchTerm]);
 
   // This function now fetches both movies and TV series
   const fetchData = async (query = '') => {
@@ -107,9 +108,11 @@ const App = () => {
   }, []);
 
   return (
-    <main className="">
-      <div className="pattern" />
-      <div className="wrapper">
+    <>
+      <Navbar onHomeClick={handleCloseModal} />
+      <main>
+        <div className="pattern" />
+        <div className="wrapper">
         <header>
           <img src="./hero.png" alt="Hero Banner" />
           <h1>Find <span className="text-gradient">Movies And Series</span> You'll Enjoy Without the Hassle</h1>
@@ -160,6 +163,7 @@ const App = () => {
         )}
       </div>
     </main>
+    </>
   );
 };
 

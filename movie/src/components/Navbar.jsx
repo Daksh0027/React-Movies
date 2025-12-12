@@ -1,7 +1,9 @@
-const Navbar = () => {
+const Navbar = ({ onHomeClick }) => {
   const handleHomeClick = () => {
+    if (onHomeClick) {
+      onHomeClick();
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    window.location.reload();
   };
   const handleMoviesClick = () =>{
     window.open('/','_self');
