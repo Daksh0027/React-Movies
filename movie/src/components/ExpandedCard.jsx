@@ -22,7 +22,7 @@ const formatRuntime = (minutes) => {
 };
 
 // Component definition (no changes to props or logic)
-const ExpandedCard = ({ mediaId, mediaType, apiKey, onClose }) => {
+const ExpandedCard = ({ mediaId, mediaType, apiKey, onClose, isWatched, onToggleWatched }) => {
   const [details, setDetails] = useState(null);
   const [imdbId, setImdbId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -195,14 +195,23 @@ const ExpandedCard = ({ mediaId, mediaType, apiKey, onClose }) => {
               </div>
             </section>
             
-            {details.homepage && (
-              <footer className="mt-8 pt-6 border-t border-slate-800 flex justify-center">
-                  {/* FIX: Button with a gradient background */}
+            <footer className="mt-8 pt-6 border-t border-slate-800 flex justify-center gap-4 flex-wrap">
+                <button
+                  onClick={() => onToggleWatched(mediaType, mediaId)}
+                  className={`px-10 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 cursor-pointer border-none ${
+                    isWatched
+                      ? 'bg-green-600 hover:bg-green-700 text-white'
+                      : 'bg-slate-700 hover:bg-slate-600 text-gray-200'
+                  }`}
+                >
+                  {isWatched ? '✓ Watched' : '👁 Mark as Watched'}
+                </button>
+                {details.homepage && (
                   <a href={details.homepage} target="_blank" rel="noopener noreferrer" className="px-10 py-3 bg-linear-to-r from-fuchsia-600 to-cyan-500 hover:from-fuchsia-700 hover:to-cyan-600 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105">
                     Visit Homepage
                   </a>
-              </footer>
-            )}
+                )}
+            </footer>
           </>
         )}
       </div>

@@ -7,6 +7,9 @@ import MovieCard from './components/MovieCard.jsx';
 import ExpandedCard from './components/ExpandedCard.jsx';
 import { useDebounce } from 'react-use';
 import { getTrendingMovies, updateSearchCount } from './appwrite.js';
+import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from '@clerk/clerk-react';
+import useWatched from './hooks/useWatched.js';
+
 
 const API_BASE_URL = 'https://api.themoviedb.org/3';
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
@@ -27,8 +30,15 @@ const App = () => {
 
   const [trendingMovies, setTrendingMovies] = useState([]);
   
+  // Filter: 'all' | 'movie' | 'tv'
+  const [mediaFilter, setMediaFilter] = useState('all');
+
   // Changed state to hold an object with id and media type
   const [selectedMedia, setSelectedMedia] = useState(null);
+
+  // Watched list (per-user, stored in localStorage)
+  const { isWatched, toggleWatched, watchedCount } = useWatched();
+  const [showWatchedOnly, setShowWatchedOnly] = useState(false);
 
   useDebounce(() => setDebouncedSearchTerm(searchTerm), 1000, [searchTerm]);
 
@@ -109,7 +119,30 @@ const App = () => {
 
   return (
     <>
-      <Navbar onHomeClick={handleCloseModal} />
+      <SignedOut>
+        <div className="pattern" />
+        <div className="relative z-10 flex flex-col items-center justify-center min-h-screen text-white">
+          <h1 className="text-4xl sm:text-5xl font-bold mb-4">🎞️ DakshoRama</h1>
+          <p className="text-lg mb-8 text-gray-300">Sign in to discover Movies & Series you'll love</p>
+          <div className="flex gap-4">
+            <SignInButton mode="modal">
+              <button className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-semibold transition-colors cursor-pointer">
+                Sign In
+              </button>
+            </SignInButton>
+            <SignUpButton mode="modal">
+              <button className="px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-semibold transition-colors cursor-pointer">
+                Sign Up
+              </button>
+            </SignUpButton>
+          </div>
+        </div>
+      </SignedOut>
+
+      <SignedIn>
+      {!selectedMedia && (
+        <Navbar onHomeClick={handleCloseModal} mediaFilter={mediaFilter} setMediaFilter={setMediaFilter} showWatchedOnly={showWatchedOnly} setShowWatchedOnly={setShowWatchedOnly} watchedCount={watchedCount} />
+      )}
       <main>
         <div className="pattern" />
         <div className="wrapper">
@@ -134,18 +167,22 @@ const App = () => {
         )}
 
         <section className="all-movies">
-          <h1><span className='text-gradient'>Top Rated Movies And Shows</span></h1>
+          <h1><span className='text-gradient'>{mediaFilter === 'movie' ? 'Top Rated Movies' : mediaFilter === 'tv' ? 'Top Rated TV Shows' : 'Top Rated Movies And Shows'}</span></h1>
           {isLoading ? (
             <Spinner />
           ) : errorMessage ? (
             <p className="error-message">{errorMessage}</p>
           ) : (
             <ul>
-              {mediaList.map((media) => (
+              {mediaList
+                .filter((media) => mediaFilter === 'all' || media.media_type === mediaFilter)
+                .filter((media) => !showWatchedOnly || isWatched(media.media_type, media.id))
+                .map((media) => (
                 <MovieCard
                   key={`${media.media_type}-${media.id}`}
                   media={media}
                   onClick={() => handleMediaClick(media)}
+                  isWatched={isWatched(media.media_type, media.id)}
                 />
               ))}
             </ul>
@@ -158,11 +195,14 @@ const App = () => {
             mediaId={selectedMedia.id}
             mediaType={selectedMedia.type} 
             apiKey={API_KEY} 
-            onClose={handleCloseModal} 
+            onClose={handleCloseModal}
+            isWatched={isWatched(selectedMedia.type, selectedMedia.id)}
+            onToggleWatched={toggleWatched}
           />
         )}
       </div>
     </main>
+      </SignedIn>
     </>
   );
 };
