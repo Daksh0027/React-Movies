@@ -165,7 +165,14 @@ const App = () => {
   return (
     <>
       {!selectedMedia && (
-        <Navbar onHomeClick={handleCloseModal} mediaFilter={mediaFilter} setMediaFilter={setMediaFilter} showWatchedOnly={showWatchedOnly} setShowWatchedOnly={setShowWatchedOnly} watchedCount={watchedCount} isSignedIn={isSignedIn} />
+        <Navbar onHomeClick={handleCloseModal} mediaFilter={mediaFilter} setMediaFilter={setMediaFilter} showWatchedOnly={showWatchedOnly} setShowWatchedOnly={setShowWatchedOnly} watchedCount={watchedCount} isSignedIn={isSignedIn} scrollToResults={() => {
+          setTimeout(() => {
+            if (resultsRef.current) {
+              const y = resultsRef.current.getBoundingClientRect().top + window.scrollY - 80;
+              window.scrollTo({ top: y, behavior: 'smooth' });
+            }
+          }, 100);
+        }} />
       )}
       <main>
         <div className="pattern" />
