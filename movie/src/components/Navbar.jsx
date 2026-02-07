@@ -33,7 +33,7 @@ const Navbar = ({ onHomeClick, mediaFilter, setMediaFilter, showWatchedOnly, set
           className="text-white text-xl sm:text-3xl font-bold hover:text-blue-200 transition-colors cursor-pointer bg-transparent border-none"
           onClick={handleHomeClick}
         >
-          🎞️ DakshoRama
+          🎞️ ReSpectro
         </button>
 
         {/* Mobile hamburger */}
