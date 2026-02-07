@@ -27,6 +27,11 @@
     background: #030014;
   }
 
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
   h1 {
     @apply mx-auto max-w-4xl text-center text-5xl font-bold leading-tight tracking-[-1%] text-white sm:text-[64px] sm:leading-19;
   }
@@ -61,7 +66,7 @@
     @apply mt-20;
 
     & ul {
-      @apply flex flex-row overflow-y-auto gap-5 -mt-10 w-full hide-scrollbar;
+      @apply flex flex-row overflow-y-auto gap-5 mt-4 w-full hide-scrollbar;
     }
 
     & ul li {
@@ -70,10 +75,6 @@
 
     & ul li p {
       @apply fancy-text mt-5.5 text-nowrap;
-    }
-
-    & ul li img {
-      @apply w-31.75 h-40.75 rounded-lg object-cover -ml-3.5;
     }
   }
 

@@ -1,6 +1,12 @@
 import React from 'react'
 
-const Search = ({ searchTerm, setSearchTerm }) => {
+const Search = ({ searchTerm, setSearchTerm, onSearch }) => {
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      onSearch();
+    }
+  };
+
   return (
     <div className="search">
       <div>
@@ -11,7 +17,15 @@ const Search = ({ searchTerm, setSearchTerm }) => {
           placeholder="Search through thousands of movies and series"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          onKeyDown={handleKeyDown}
         />
+
+        <button
+          onClick={onSearch}
+          className="ml-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors cursor-pointer border-none"
+        >
+          Search
+        </button>
       </div>
     </div>
   )

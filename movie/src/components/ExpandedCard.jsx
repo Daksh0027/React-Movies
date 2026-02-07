@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Spinner from './Spinner';
 import axios from 'axios';
+import { SignInButton } from '@clerk/clerk-react';
 
 // Helper functions (no changes)
 const formatCurrency = (number) => {
@@ -196,16 +197,24 @@ const ExpandedCard = ({ mediaId, mediaType, apiKey, onClose, isWatched, onToggle
             </section>
             
             <footer className="mt-8 pt-6 border-t border-slate-800 flex justify-center gap-4 flex-wrap">
-                <button
-                  onClick={() => onToggleWatched(mediaType, mediaId)}
-                  className={`px-10 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 cursor-pointer border-none ${
-                    isWatched
-                      ? 'bg-green-600 hover:bg-green-700 text-white'
-                      : 'bg-slate-700 hover:bg-slate-600 text-gray-200'
-                  }`}
-                >
-                  {isWatched ? '✓ Watched' : '👁 Mark as Watched'}
-                </button>
+                {onToggleWatched ? (
+                  <button
+                    onClick={() => onToggleWatched(mediaType, mediaId)}
+                    className={`px-10 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 cursor-pointer border-none ${
+                      isWatched
+                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : 'bg-slate-700 hover:bg-slate-600 text-gray-200'
+                    }`}
+                  >
+                    {isWatched ? '✓ Watched' : '👁 Mark as Watched'}
+                  </button>
+                ) : (
+                  <SignInButton mode="modal">
+                    <button className="px-10 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 cursor-pointer border-none bg-blue-600 hover:bg-blue-700 text-white">
+                      Sign in to track Watched
+                    </button>
+                  </SignInButton>
+                )}
                 {details.homepage && (
                   <a href={details.homepage} target="_blank" rel="noopener noreferrer" className="px-10 py-3 bg-linear-to-r from-fuchsia-600 to-cyan-500 hover:from-fuchsia-700 hover:to-cyan-600 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105">
                     Visit Homepage

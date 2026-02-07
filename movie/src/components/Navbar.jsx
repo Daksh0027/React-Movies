@@ -1,6 +1,6 @@
-import { UserButton } from '@clerk/clerk-react';
+import { UserButton, SignInButton, SignUpButton } from '@clerk/clerk-react';
 
-const Navbar = ({ onHomeClick, mediaFilter, setMediaFilter, showWatchedOnly, setShowWatchedOnly, watchedCount }) => {
+const Navbar = ({ onHomeClick, mediaFilter, setMediaFilter, showWatchedOnly, setShowWatchedOnly, watchedCount, isSignedIn }) => {
   const handleHomeClick = () => {
     if (onHomeClick) {
       onHomeClick();
@@ -10,12 +10,12 @@ const Navbar = ({ onHomeClick, mediaFilter, setMediaFilter, showWatchedOnly, set
   };
 
   const handleMoviesClick = () => {
-    setMediaFilter('movie');
+    setMediaFilter(mediaFilter === 'movie' ? 'all' : 'movie');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSeriesClick = () => {
-    setMediaFilter('tv');
+    setMediaFilter(mediaFilter === 'tv' ? 'all' : 'tv');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -44,13 +44,30 @@ const Navbar = ({ onHomeClick, mediaFilter, setMediaFilter, showWatchedOnly, set
           >
             Series
           </button>
-          <button 
-            className={`text-base sm:text-lg font-medium transition-colors px-4 py-2 rounded-lg border-none cursor-pointer ${showWatchedOnly ? 'bg-green-600 text-white' : defaultClass}`}
-            onClick={() => setShowWatchedOnly(!showWatchedOnly)}
-          >
-            Watched ({watchedCount})
-          </button>
-          <UserButton afterSignOutUrl="/" />
+          {isSignedIn ? (
+            <>
+              <button 
+                className={`text-base sm:text-lg font-medium transition-colors px-4 py-2 rounded-lg border-none cursor-pointer ${showWatchedOnly ? 'bg-green-600 text-white' : defaultClass}`}
+                onClick={() => setShowWatchedOnly(!showWatchedOnly)}
+              >
+                Watched ({watchedCount})
+              </button>
+              <UserButton afterSignOutUrl="/" />
+            </>
+          ) : (
+            <div className="flex gap-2 items-center">
+              <SignInButton mode="modal">
+                <button className="text-base font-medium px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white border-none cursor-pointer transition-colors">
+                  Sign In
+                </button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <button className="text-base font-medium px-4 py-2 bg-transparent hover:bg-blue-800/50 rounded-lg text-white border-none cursor-pointer transition-colors">
+                  Sign Up
+                </button>
+              </SignUpButton>
+            </div>
+          )}
         </div>
       </div>
     </nav>

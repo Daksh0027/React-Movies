@@ -5,9 +5,9 @@ import Search from './components/Search.jsx';
 import Spinner from './components/Spinner.jsx';
 import MovieCard from './components/MovieCard.jsx';
 import ExpandedCard from './components/ExpandedCard.jsx';
-import { useDebounce } from 'react-use';
+
 import { getTrendingMovies, updateSearchCount } from './appwrite.js';
-import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from '@clerk/clerk-react';
+import { useUser } from '@clerk/clerk-react';
 import useWatched from './hooks/useWatched.js';
 
 
@@ -20,7 +20,6 @@ const API_HEADERS = {
 };
 
 const App = () => {
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
   // Renamed from movieList to mediaList to reflect movies and series
@@ -36,11 +35,16 @@ const App = () => {
   // Changed state to hold an object with id and media type
   const [selectedMedia, setSelectedMedia] = useState(null);
 
+  // Auth state
+  const { isSignedIn, user } = useUser();
+
   // Watched list (per-user, stored in localStorage)
   const { isWatched, toggleWatched, watchedCount } = useWatched();
   const [showWatchedOnly, setShowWatchedOnly] = useState(false);
 
-  useDebounce(() => setDebouncedSearchTerm(searchTerm), 1000, [searchTerm]);
+  const handleSearch = () => {
+    fetchData(searchTerm);
+  };
 
   // This function now fetches both movies and TV series
   const fetchData = async (query = '') => {
@@ -77,7 +81,7 @@ const App = () => {
       setMediaList(combinedResults);
 
       if (query && combinedResults.length > 0) {
-        await updateSearchCount(query, combinedResults[0]);
+        await updateSearchCount(query, combinedResults[0], user?.id);
       }
     } catch (error) {
       // Axios provides more detailed error info
@@ -93,7 +97,7 @@ const App = () => {
 
   const loadTrendingMovies = async () => {
     try {
-      const movies = await getTrendingMovies();
+      const movies = await getTrendingMovies(user?.id);
       setTrendingMovies(movies); 
     } catch (error) {
       console.error(`Error fetching trending movies: ${error}`);
@@ -107,41 +111,22 @@ const App = () => {
 
   const handleCloseModal = () => {
     setSelectedMedia(null);
+    setSearchTerm('');
+    fetchData();
   };
 
   useEffect(() => {
-    fetchData(debouncedSearchTerm);
-  }, [debouncedSearchTerm]);
+    fetchData();
+  }, []);
 
   useEffect(() => {
     loadTrendingMovies();
-  }, []);
+  }, [user?.id]);
 
   return (
     <>
-      <SignedOut>
-        <div className="pattern" />
-        <div className="relative z-10 flex flex-col items-center justify-center min-h-screen text-white">
-          <h1 className="text-4xl sm:text-5xl font-bold mb-4">🎞️ DakshoRama</h1>
-          <p className="text-lg mb-8 text-gray-300">Sign in to discover Movies & Series you'll love</p>
-          <div className="flex gap-4">
-            <SignInButton mode="modal">
-              <button className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-semibold transition-colors cursor-pointer">
-                Sign In
-              </button>
-            </SignInButton>
-            <SignUpButton mode="modal">
-              <button className="px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-semibold transition-colors cursor-pointer">
-                Sign Up
-              </button>
-            </SignUpButton>
-          </div>
-        </div>
-      </SignedOut>
-
-      <SignedIn>
       {!selectedMedia && (
-        <Navbar onHomeClick={handleCloseModal} mediaFilter={mediaFilter} setMediaFilter={setMediaFilter} showWatchedOnly={showWatchedOnly} setShowWatchedOnly={setShowWatchedOnly} watchedCount={watchedCount} />
+        <Navbar onHomeClick={handleCloseModal} mediaFilter={mediaFilter} setMediaFilter={setMediaFilter} showWatchedOnly={showWatchedOnly} setShowWatchedOnly={setShowWatchedOnly} watchedCount={watchedCount} isSignedIn={isSignedIn} />
       )}
       <main>
         <div className="pattern" />
@@ -149,17 +134,32 @@ const App = () => {
         <header>
           <img src="./hero.png" alt="Hero Banner" />
           <h1>Find <span className="text-gradient">Movies And Series</span> You'll Enjoy Without the Hassle</h1>
-          <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+          <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} onSearch={handleSearch} />
         </header>
 
         {trendingMovies.length > 0 && (
           <section className="trending">
-            <h2><span className='text-gradient'>Suggested </span></h2>
+            <h2><span className='text-gradient'>Suggested</span></h2>
             <ul>
               {trendingMovies.map((movie, index) => (
-                <li key={movie.$id}>
+                <li
+                  key={movie.$id}
+                  className="cursor-pointer"
+                  onClick={() => {
+                    setSearchTerm(movie.searchTerm);
+                    fetchData(movie.searchTerm);
+                  }}
+                >
                   <p>{index + 1}</p>
-                  <img src={movie.poster_url} alt={movie.title} />
+                  <div className="flex flex-col items-center -ml-3.5 shrink-0">
+                    <div className="relative w-40 h-56 rounded-lg overflow-hidden shadow-lg border border-slate-800 bg-dark-100 transition-transform hover:scale-105">
+                      <img
+                        src={movie.poster_url}
+                        alt={movie.searchTerm}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -182,7 +182,7 @@ const App = () => {
                   key={`${media.media_type}-${media.id}`}
                   media={media}
                   onClick={() => handleMediaClick(media)}
-                  isWatched={isWatched(media.media_type, media.id)}
+                  isWatched={isSignedIn && isWatched(media.media_type, media.id)}
                 />
               ))}
             </ul>
@@ -196,13 +196,12 @@ const App = () => {
             mediaType={selectedMedia.type} 
             apiKey={API_KEY} 
             onClose={handleCloseModal}
-            isWatched={isWatched(selectedMedia.type, selectedMedia.id)}
-            onToggleWatched={toggleWatched}
+            isWatched={isSignedIn && isWatched(selectedMedia.type, selectedMedia.id)}
+            onToggleWatched={isSignedIn ? toggleWatched : null}
           />
         )}
       </div>
     </main>
-      </SignedIn>
     </>
   );
 };
