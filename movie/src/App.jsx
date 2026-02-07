@@ -182,7 +182,7 @@ const App = () => {
                 >
                   <p>{index + 1}</p>
                   <div className="flex flex-col items-center -ml-3.5 shrink-0">
-                    <div className="relative w-40 h-56 rounded-lg overflow-hidden shadow-lg border border-slate-800 bg-dark-100 transition-transform hover:scale-105">
+                    <div className="relative w-28 h-40 sm:w-40 sm:h-56 rounded-lg overflow-hidden shadow-lg border border-slate-800 bg-dark-100 transition-transform hover:scale-105">
                       <img
                         src={movie.poster_url}
                         alt={movie.searchTerm}

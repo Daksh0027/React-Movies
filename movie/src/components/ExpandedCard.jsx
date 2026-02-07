@@ -196,11 +196,11 @@ const ExpandedCard = ({ mediaId, mediaType, apiKey, onClose, isWatched, onToggle
               </div>
             </section>
             
-            <footer className="mt-8 pt-6 border-t border-slate-800 flex justify-center gap-4 flex-wrap">
+            <footer className="mt-8 pt-6 border-t border-slate-800 flex justify-center gap-3 sm:gap-4 flex-wrap">
                 {onToggleWatched ? (
                   <button
                     onClick={() => onToggleWatched(mediaType, mediaId)}
-                    className={`px-10 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 cursor-pointer border-none ${
+                    className={`px-6 sm:px-10 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 cursor-pointer border-none text-sm sm:text-base ${
                       isWatched
                         ? 'bg-green-600 hover:bg-green-700 text-white'
                         : 'bg-slate-700 hover:bg-slate-600 text-gray-200'
@@ -210,13 +210,13 @@ const ExpandedCard = ({ mediaId, mediaType, apiKey, onClose, isWatched, onToggle
                   </button>
                 ) : (
                   <SignInButton mode="modal">
-                    <button className="px-10 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 cursor-pointer border-none bg-blue-600 hover:bg-blue-700 text-white">
+                    <button className="px-6 sm:px-10 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 cursor-pointer border-none bg-blue-600 hover:bg-blue-700 text-white text-sm sm:text-base">
                       Sign in to track Watched
                     </button>
                   </SignInButton>
                 )}
                 {details.homepage && (
-                  <a href={details.homepage} target="_blank" rel="noopener noreferrer" className="px-10 py-3 bg-linear-to-r from-fuchsia-600 to-cyan-500 hover:from-fuchsia-700 hover:to-cyan-600 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105">
+                  <a href={details.homepage} target="_blank" rel="noopener noreferrer" className="px-6 sm:px-10 py-3 bg-linear-to-r from-fuchsia-600 to-cyan-500 hover:from-fuchsia-700 hover:to-cyan-600 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 text-sm sm:text-base">
                     Visit Homepage
                   </a>
                 )}

@@ -33,7 +33,7 @@
   }
 
   h1 {
-    @apply mx-auto max-w-4xl text-center text-5xl font-bold leading-tight tracking-[-1%] text-white sm:text-[64px] sm:leading-19;
+    @apply mx-auto max-w-4xl text-center text-3xl font-bold leading-tight tracking-[-1%] text-white sm:text-5xl md:text-[64px] md:leading-19;
   }
 
   h2 {
@@ -45,7 +45,7 @@
   }
 
   header {
-    @apply sm:mt-10 mt-5;
+    @apply sm:mt-10 mt-16;
   }
 
   header img {
@@ -70,7 +70,7 @@
     }
 
     & ul li {
-      @apply min-w-57.5 flex flex-row items-center;
+      @apply min-w-40 sm:min-w-57.5 flex flex-row items-center;
     }
 
     & ul li p {
@@ -148,9 +148,14 @@
 }
 
 @utility fancy-text {
-  -webkit-text-stroke: 5px rgba(206, 206, 251, 0.5);
-  font-size: 190px;
+  -webkit-text-stroke: 3px rgba(206, 206, 251, 0.5);
+  font-size: 80px;
   font-family: "Bebas Neue", sans-serif;
+
+  @media (min-width: 640px) {
+    -webkit-text-stroke: 5px rgba(206, 206, 251, 0.5);
+    font-size: 190px;
+  }
 }
 
 @utility hide-scrollbar {
