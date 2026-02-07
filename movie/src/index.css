@@ -21,6 +21,10 @@
 }
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     font-family: "DM Sans", serif;
     font-optical-sizing: auto;

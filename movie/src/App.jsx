@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import Navbar from './components/Navbar.jsx';
 import Search from './components/Search.jsx';
@@ -43,8 +43,16 @@ const App = () => {
   const [showWatchedOnly, setShowWatchedOnly] = useState(false);
   const [watchedMediaList, setWatchedMediaList] = useState([]);
 
-  const handleSearch = () => {
-    fetchData(searchTerm);
+  const resultsRef = useRef(null);
+
+  const handleSearch = async () => {
+    await fetchData(searchTerm);
+    setTimeout(() => {
+      if (resultsRef.current) {
+        const y = resultsRef.current.getBoundingClientRect().top + window.scrollY - 40;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      }
+    }, 150);
   };
 
   // This function now fetches both movies and TV series
@@ -110,10 +118,11 @@ const App = () => {
     setSelectedMedia({ id: media.id, type: media.media_type });
   };
 
-  const handleCloseModal = () => {
+  const handleCloseModal = async () => {
     setSelectedMedia(null);
     setSearchTerm('');
-    fetchData();
+    await fetchData();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   useEffect(() => {
@@ -196,7 +205,7 @@ const App = () => {
           </section>
         )}
 
-        <section className="all-movies">
+        <section className="all-movies" ref={resultsRef}>
           <h1><span className='text-gradient'>{mediaFilter === 'movie' ? 'Top Rated Movies' : mediaFilter === 'tv' ? 'Top Rated TV Shows' : 'Top Rated Movies And Shows'}</span></h1>
           {isLoading ? (
             <Spinner />

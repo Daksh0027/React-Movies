@@ -4,13 +4,14 @@ import { UserButton, SignInButton, SignUpButton } from '@clerk/clerk-react';
 const Navbar = ({ onHomeClick, mediaFilter, setMediaFilter, showWatchedOnly, setShowWatchedOnly, watchedCount, isSignedIn }) => {
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const handleHomeClick = () => {
-    if (onHomeClick) {
-      onHomeClick();
-    }
+  const handleHomeClick = async () => {
     setMediaFilter('all');
     setMenuOpen(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (onHomeClick) {
+      await onHomeClick();
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const handleMoviesClick = () => {
