@@ -39,8 +39,9 @@ const App = () => {
   const { isSignedIn, user } = useUser();
 
   // Watched list (per-user, stored in localStorage)
-  const { isWatched, toggleWatched, watchedCount } = useWatched();
+  const { isWatched, toggleWatched, watchedCount, watchedItems } = useWatched();
   const [showWatchedOnly, setShowWatchedOnly] = useState(false);
+  const [watchedMediaList, setWatchedMediaList] = useState([]);
 
   const handleSearch = () => {
     fetchData(searchTerm);
@@ -123,6 +124,35 @@ const App = () => {
     loadTrendingMovies();
   }, [user?.id]);
 
+  // Fetch full TMDB details for all watched items when filter is toggled on
+  useEffect(() => {
+    if (!showWatchedOnly || watchedItems.length === 0) {
+      setWatchedMediaList([]);
+      return;
+    }
+    let cancelled = false;
+    const fetchWatchedMedia = async () => {
+      setIsLoading(true);
+      try {
+        const promises = watchedItems.map(({ mediaType, mediaId }) =>
+          axios.get(`${API_BASE_URL}/${mediaType}/${mediaId}`, { headers: API_HEADERS })
+            .then(res => ({ ...res.data, media_type: mediaType }))
+            .catch(() => null)
+        );
+        const results = await Promise.all(promises);
+        if (!cancelled) {
+          setWatchedMediaList(results.filter(Boolean));
+        }
+      } catch (error) {
+        console.error('Error fetching watched media:', error);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+    fetchWatchedMedia();
+    return () => { cancelled = true; };
+  }, [showWatchedOnly, watchedItems.length]);
+
   return (
     <>
       {!selectedMedia && (
@@ -174,9 +204,8 @@ const App = () => {
             <p className="error-message">{errorMessage}</p>
           ) : (
             <ul>
-              {mediaList
+              {(showWatchedOnly ? watchedMediaList : mediaList)
                 .filter((media) => mediaFilter === 'all' || media.media_type === mediaFilter)
-                .filter((media) => !showWatchedOnly || isWatched(media.media_type, media.id))
                 .map((media) => (
                 <MovieCard
                   key={`${media.media_type}-${media.id}`}

@@ -71,7 +71,13 @@ const useWatched = () => {
 
   const watchedCount = watched.size;
 
-  return { isWatched, toggleWatched, watchedCount, loading };
+  // Return the raw set entries as an array of { mediaType, mediaId }
+  const watchedItems = Array.from(watched).map(key => {
+    const [mediaType, ...rest] = key.split('-');
+    return { mediaType, mediaId: rest.join('-') };
+  });
+
+  return { isWatched, toggleWatched, watchedCount, watchedItems, loading };
 };
 
 export default useWatched;
