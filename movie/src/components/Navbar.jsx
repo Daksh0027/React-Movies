@@ -27,7 +27,7 @@ const Navbar = ({ onHomeClick, mediaFilter, setMediaFilter, showWatchedOnly, set
   const defaultClass = 'bg-transparent text-white hover:bg-blue-800/50 hover:text-blue-200';
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 w-full bg-blue-900/90 backdrop-blur-sm shadow-lg">
+    <nav className="fixed top-0 left-0 right-0 z-50 w-full backdrop-blur-sm shadow-lg">
       <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 max-w-7xl mx-auto">
         <button 
           className="text-white text-xl sm:text-3xl font-bold hover:text-blue-200 transition-colors cursor-pointer bg-transparent border-none"
