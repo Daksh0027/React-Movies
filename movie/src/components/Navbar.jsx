@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { UserButton, SignInButton, SignUpButton } from '@clerk/clerk-react';
 
-const Navbar = ({ onHomeClick, mediaFilter, setMediaFilter, showWatchedOnly, setShowWatchedOnly, watchedCount, isSignedIn }) => {
+const Navbar = ({ onHomeClick, mediaFilter, setMediaFilter, showWatchedOnly, setShowWatchedOnly, watchedCount, isSignedIn, scrollToResults }) => {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleHomeClick = async () => {
@@ -16,12 +16,14 @@ const Navbar = ({ onHomeClick, mediaFilter, setMediaFilter, showWatchedOnly, set
 
   const handleMoviesClick = () => {
     setMediaFilter(mediaFilter === 'movie' ? 'all' : 'movie');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setMenuOpen(false);
+    if (scrollToResults) scrollToResults();
   };
 
   const handleSeriesClick = () => {
     setMediaFilter(mediaFilter === 'tv' ? 'all' : 'tv');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setMenuOpen(false);
+    if (scrollToResults) scrollToResults();
   };
 
   const activeClass = 'bg-blue-700 text-white';

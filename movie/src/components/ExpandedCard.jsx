@@ -155,7 +155,7 @@ const ExpandedCard = ({ mediaId, mediaType, apiKey, onClose, isWatched, onToggle
               <div className="mb-6">
                 {/* FIX: Heading with gradient underline */}
                 <h3 className="text-2xl font-semibold">Overview</h3>
-                <div className="h-0.5 w-20 bg-linear-to-r from-fuchsia-600 to-cyan-500 mt-1"></div>
+                <div className="h-0.5 w-20 bg-linear-to-r from-[#9b8ec4] to-[#3a7aad] mt-1"></div>
               </div>
               <p className="text-gray-300 mb-8 leading-relaxed max-w-4xl">{details.overview}</p>
 
@@ -216,7 +216,7 @@ const ExpandedCard = ({ mediaId, mediaType, apiKey, onClose, isWatched, onToggle
                   </SignInButton>
                 )}
                 {details.homepage && (
-                  <a href={details.homepage} target="_blank" rel="noopener noreferrer" className="px-6 sm:px-10 py-3 bg-linear-to-r from-fuchsia-600 to-cyan-500 hover:from-fuchsia-700 hover:to-cyan-600 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 text-sm sm:text-base">
+                  <a href={details.homepage} target="_blank" rel="noopener noreferrer" className="px-6 sm:px-10 py-3 bg-linear-to-r from-[#9b8ec4] to-[#3a7aad] hover:from-[#8a7db3] hover:to-[#2f6a9a] rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 text-sm sm:text-base">
                     Visit Homepage
                   </a>
                 )}
