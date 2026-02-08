@@ -135,7 +135,7 @@ const ExpandedCard = ({ mediaId, mediaType, apiKey, onClose, isWatched, onToggle
                     title={`Player for ${title}`}
                     frameBorder="0"
                     allowFullScreen
-                    sandbox="allow-scripts allow-same-origin allow-forms"
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
                     className="w-full h-full rounded-lg z-10"
                   ></iframe>
                 ) : (
