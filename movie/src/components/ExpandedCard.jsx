@@ -72,6 +72,18 @@ const ExpandedCard = ({ mediaId, mediaType, apiKey, onClose, isWatched, onToggle
     };
   }, [mediaId, mediaType, apiKey]);
 
+  useEffect(() => {
+    const handleBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+
   // Loading and Error states (no changes)
   const handleContentClick = (e) => e.stopPropagation();
   if (isLoading) { return <Spinner />}
@@ -135,6 +147,7 @@ const ExpandedCard = ({ mediaId, mediaType, apiKey, onClose, isWatched, onToggle
                     title={`Player for ${title}`}
                     frameBorder="0"
                     allowFullScreen
+                    referrerPolicy="no-referrer"
                     className="w-full h-full rounded-lg z-10"
                   ></iframe>
                 ) : (
