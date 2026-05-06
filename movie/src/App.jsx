@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import Navbar from './components/Navbar.jsx';
 import Search from './components/Search.jsx';
@@ -31,6 +31,8 @@ const App = () => {
   
   // Filter: 'all' | 'movie' | 'tv'
   const [mediaFilter, setMediaFilter] = useState('all');
+  const [selectedGenre, setSelectedGenre] = useState('all');
+  const [genreMap, setGenreMap] = useState({ movie: {}, tv: {} });
 
   // Changed state to hold an object with id and media type
   const [selectedMedia, setSelectedMedia] = useState(null);
@@ -56,7 +58,7 @@ const App = () => {
   };
 
   // This function now fetches both movies and TV series
-  const fetchData = async (query = '') => {
+  const fetchData = useCallback(async (query = '') => {
     setIsLoading(true);
     setErrorMessage('');
 
@@ -101,17 +103,17 @@ const App = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user?.id]);
 
 
-  const loadTrendingMovies = async () => {
+  const loadTrendingMovies = useCallback(async () => {
     try {
       const movies = await getTrendingMovies(user?.id);
       setTrendingMovies(movies); 
     } catch (error) {
       console.error(`Error fetching trending movies: ${error}`);
     }
-  };
+  }, [user?.id]);
 
   // Updated handler to accept the full media object
   const handleMediaClick = (media) => {
@@ -121,17 +123,157 @@ const App = () => {
   const handleCloseModal = async () => {
     setSelectedMedia(null);
     setSearchTerm('');
+    setSelectedGenre('all');
     await fetchData();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const loadGenres = async () => {
+    try {
+      const [movieGenresResponse, tvGenresResponse] = await Promise.all([
+        axios.get(`${API_BASE_URL}/genre/movie/list?language=en`, { headers: API_HEADERS }),
+        axios.get(`${API_BASE_URL}/genre/tv/list?language=en`, { headers: API_HEADERS })
+      ]);
+
+      const movieGenres = (movieGenresResponse.data.genres || []).reduce((acc, genre) => {
+        acc[genre.id] = genre.name;
+        return acc;
+      }, {});
+
+      const tvGenres = (tvGenresResponse.data.genres || []).reduce((acc, genre) => {
+        acc[genre.id] = genre.name;
+        return acc;
+      }, {});
+
+      setGenreMap({ movie: movieGenres, tv: tvGenres });
+    } catch (error) {
+      console.error('Error fetching genres:', error);
+    }
+  };
+
+  const fetchGenreMedia = useCallback(async (genreId) => {
+    setIsLoading(true);
+    setErrorMessage('');
+
+    try {
+      const pagesToFetch = 3;
+      const requestTargets = [];
+
+      if (mediaFilter !== 'tv') {
+        for (let page = 1; page <= pagesToFetch; page += 1) {
+          requestTargets.push({
+            type: 'movie',
+            url: `${API_BASE_URL}/discover/movie?language=en-US&sort_by=vote_average.desc&vote_count.gte=400&with_genres=${genreId}&page=${page}`
+          });
+        }
+      }
+
+      if (mediaFilter !== 'movie') {
+        for (let page = 1; page <= pagesToFetch; page += 1) {
+          requestTargets.push({
+            type: 'tv',
+            url: `${API_BASE_URL}/discover/tv?language=en-US&sort_by=vote_average.desc&vote_count.gte=200&with_genres=${genreId}&page=${page}`
+          });
+        }
+      }
+
+      const responses = await Promise.all(
+        requestTargets.map(({ type, url }) =>
+          axios.get(url, { headers: API_HEADERS }).then((res) => ({
+            type,
+            results: res.data?.results || []
+          }))
+        )
+      );
+
+      const flattened = responses.flatMap(({ type, results }) =>
+        results.map((item) => ({ ...item, media_type: type }))
+      );
+
+      const uniqueMap = new Map();
+      flattened.forEach((item) => {
+        uniqueMap.set(`${item.media_type}-${item.id}`, item);
+      });
+
+      const combinedResults = Array.from(uniqueMap.values())
+        .sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
+
+      if (combinedResults.length === 0) {
+        setErrorMessage('No media found for this genre.');
+      }
+
+      setMediaList(combinedResults);
+    } catch (error) {
+      const message = error.response?.data?.status_message || error.message || 'Error fetching genre media.';
+      console.error(`Error fetching genre media: ${message}`);
+      setErrorMessage(message);
+      setMediaList([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [mediaFilter]);
+
+  const mediaHasGenre = (media, genreId) => {
+    if (Array.isArray(media.genre_ids)) {
+      return media.genre_ids.includes(genreId);
+    }
+
+    if (Array.isArray(media.genres)) {
+      return media.genres.some((genre) => genre.id === genreId);
+    }
+
+    return false;
+  };
+
+  const genreOptions = useMemo(() => {
+    if (mediaFilter === 'movie') {
+      return Object.entries(genreMap.movie)
+        .map(([id, name]) => ({ id: Number(id), name }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    if (mediaFilter === 'tv') {
+      return Object.entries(genreMap.tv)
+        .map(([id, name]) => ({ id: Number(id), name }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    const mergedGenres = new Map();
+    [...Object.entries(genreMap.movie), ...Object.entries(genreMap.tv)].forEach(([id, name]) => {
+      if (!mergedGenres.has(Number(id))) {
+        mergedGenres.set(Number(id), name);
+      }
+    });
+
+    return Array.from(mergedGenres.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [genreMap.movie, genreMap.tv, mediaFilter]);
+
+  const filteredMediaList = (showWatchedOnly ? watchedMediaList : mediaList)
+    .filter((media) => mediaFilter === 'all' || media.media_type === mediaFilter)
+    .filter((media) => selectedGenre === 'all' || mediaHasGenre(media, Number(selectedGenre)));
+
   useEffect(() => {
     fetchData();
-  }, []);
+    loadGenres();
+  }, [fetchData]);
+
+  useEffect(() => {
+    setSelectedGenre('all');
+  }, [mediaFilter]);
 
   useEffect(() => {
     loadTrendingMovies();
-  }, [user?.id]);
+  }, [loadTrendingMovies]);
+
+  useEffect(() => {
+    if (selectedGenre === 'all' || showWatchedOnly || searchTerm) {
+      return;
+    }
+
+    fetchGenreMedia(selectedGenre);
+  }, [selectedGenre, mediaFilter, showWatchedOnly, searchTerm, fetchGenreMedia]);
 
   // Fetch full TMDB details for all watched items when filter is toggled on
   useEffect(() => {
@@ -160,7 +302,7 @@ const App = () => {
     };
     fetchWatchedMedia();
     return () => { cancelled = true; };
-  }, [showWatchedOnly, watchedItems.length]);
+  }, [showWatchedOnly, watchedItems]);
 
   return (
     <>
@@ -214,15 +356,36 @@ const App = () => {
 
         <section className="all-movies" ref={resultsRef}>
           <h1><span className='text-gradient'>{mediaFilter === 'movie' ? 'Top Rated Movies' : mediaFilter === 'tv' ? 'Top Rated TV Shows' : 'Top Rated Movies And Shows'}</span></h1>
+          <div className="flex items-center justify-end gap-3 mt-2 mb-4">
+            <label htmlFor="genre-filter" className="text-light-200 text-sm sm:text-base">Genre:</label>
+            <select
+              id="genre-filter"
+              value={selectedGenre}
+              onChange={(e) => {
+                const nextGenre = e.target.value;
+                setSelectedGenre(nextGenre);
+
+                if (nextGenre === 'all' && !showWatchedOnly && !searchTerm) {
+                  fetchData();
+                }
+              }}
+              className="bg-dark-100 text-white border border-light-200/20 rounded-lg px-3 py-2 text-sm sm:text-base outline-none focus:border-blue-400"
+            >
+              <option value="all">All Genres</option>
+              {genreOptions.map((genre) => (
+                <option key={genre.id} value={String(genre.id)}>
+                  {genre.name}
+                </option>
+              ))}
+            </select>
+          </div>
           {isLoading ? (
             <Spinner />
           ) : errorMessage ? (
             <p className="error-message">{errorMessage}</p>
           ) : (
             <ul>
-              {(showWatchedOnly ? watchedMediaList : mediaList)
-                .filter((media) => mediaFilter === 'all' || media.media_type === mediaFilter)
-                .map((media) => (
+              {filteredMediaList.map((media) => (
                 <MovieCard
                   key={`${media.media_type}-${media.id}`}
                   media={media}
