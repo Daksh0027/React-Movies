@@ -1,10 +1,12 @@
-const MovieCard = ({ media, onClick, isWatched }) => {
+import { forwardRef } from 'react';
+
+const MovieCard = forwardRef(({ media, onClick, isWatched }, ref) => {
   // Destructure properties, handling differences between movies and TV series
   const { vote_average, poster_path, original_language } = media;
   const title = media.title || media.name;
   const releaseDate = media.release_date || media.first_air_date; // if movie release date or series first air date 
   return (
-    <div className="movie-card cursor-pointer relative" onClick={onClick}>
+    <div ref={ref} className="movie-card cursor-pointer relative" onClick={onClick}>
       {isWatched && (
         <div className="absolute top-2 left-2 z-10 bg-green-600 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
           <span>✓</span> Watched
@@ -36,6 +38,6 @@ const MovieCard = ({ media, onClick, isWatched }) => {
       </div>
     </div>
   );
-};
+});
 
 export default MovieCard;

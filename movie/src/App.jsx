@@ -21,6 +21,9 @@ const API_HEADERS = {
 
 const App = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // Renamed from movieList to mediaList to reflect movies and series
   const [mediaList, setMediaList] = useState([]);
@@ -47,8 +50,21 @@ const App = () => {
 
   const resultsRef = useRef(null);
 
+  const observer = useRef();
+  const lastMediaElementRef = useCallback(node => {
+    if (isLoading || isLoadingMore) return;
+    if (observer.current) observer.current.disconnect();
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore && !showWatchedOnly) {
+        setPage(prevPage => prevPage + 1);
+      }
+    });
+    if (node) observer.current.observe(node);
+  }, [isLoading, isLoadingMore, hasMore, showWatchedOnly]);
+
   const handleSearch = async () => {
-    await fetchData(searchTerm);
+    setPage(1);
+    await fetchData(searchTerm, 1);
     setTimeout(() => {
       if (resultsRef.current) {
         const y = resultsRef.current.getBoundingClientRect().top + window.scrollY - 40;
@@ -58,18 +74,22 @@ const App = () => {
   };
 
   // This function now fetches both movies and TV series
-  const fetchData = useCallback(async (query = '') => {
-    setIsLoading(true);
+  const fetchData = useCallback(async (query = '', pageNum = 1) => {
+    if (pageNum === 1) {
+      setIsLoading(true);
+    } else {
+      setIsLoadingMore(true);
+    }
     setErrorMessage('');
 
     try {
       const movieEndpoint = query
-        ? `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}`
-        : `${API_BASE_URL}/discover/movie?sort_by=popularity.desc`;
+        ? `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}&page=${pageNum}`
+        : `${API_BASE_URL}/discover/movie?sort_by=popularity.desc&page=${pageNum}`;
 
       const seriesEndpoint = query
-        ? `${API_BASE_URL}/search/tv?query=${encodeURIComponent(query)}`
-        : `${API_BASE_URL}/tv/top_rated?language=en-US&page=1`; // sort by popularity descending is dumb
+        ? `${API_BASE_URL}/search/tv?query=${encodeURIComponent(query)}&page=${pageNum}`
+        : `${API_BASE_URL}/tv/top_rated?language=en-US&page=${pageNum}`; // sort by popularity descending is dumb
 
       // axios both movies and series together 
       const [movieResponse, seriesResponse] = await Promise.all([ /* Promise.all for multiple request */
@@ -85,23 +105,29 @@ const App = () => {
       const combinedResults = [...movies, ...series]
         .sort((a, b) => b.popularity - a.popularity);
 
-      if (combinedResults.length === 0) {
+      const maxPages = Math.max(movieResponse.data.total_pages || 0, seriesResponse.data.total_pages || 0);
+      setHasMore(pageNum < maxPages && pageNum < 500);
+
+      if (combinedResults.length === 0 && pageNum === 1) {
         setErrorMessage('No movies or series found for your search.');
       }
       
-      setMediaList(combinedResults);
+      setMediaList(prev => pageNum === 1 ? combinedResults : [...prev, ...combinedResults]);
 
-      if (query && combinedResults.length > 0) {
+      if (query && combinedResults.length > 0 && pageNum === 1) {
         await updateSearchCount(query, combinedResults[0], user?.id);
       }
     } catch (error) {
       // Axios provides more detailed error info
       const message = error.response?.data?.status_message || error.message || 'Error fetching data.';
       console.error(`Error fetching data: ${message}`);
-      setErrorMessage(message);
-      setMediaList([]);
+      if (pageNum === 1) {
+        setErrorMessage(message);
+        setMediaList([]);
+      }
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
   }, [user?.id]);
 
@@ -124,7 +150,8 @@ const App = () => {
     setSelectedMedia(null);
     setSearchTerm('');
     setSelectedGenre('all');
-    await fetchData();
+    setPage(1);
+    await fetchData('', 1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -151,44 +178,50 @@ const App = () => {
     }
   };
 
-  const fetchGenreMedia = useCallback(async (genreId) => {
-    setIsLoading(true);
+  const fetchGenreMedia = useCallback(async (genreId, pageNum = 1) => {
+    if (pageNum === 1) {
+      setIsLoading(true);
+    } else {
+      setIsLoadingMore(true);
+    }
     setErrorMessage('');
 
     try {
-      const pagesToFetch = 3;
       const requestTargets = [];
 
       if (mediaFilter !== 'tv') {
-        for (let page = 1; page <= pagesToFetch; page += 1) {
-          requestTargets.push({
-            type: 'movie',
-            url: `${API_BASE_URL}/discover/movie?language=en-US&sort_by=vote_average.desc&vote_count.gte=400&with_genres=${genreId}&page=${page}`
-          });
-        }
+        requestTargets.push({
+          type: 'movie',
+          url: `${API_BASE_URL}/discover/movie?language=en-US&sort_by=vote_average.desc&vote_count.gte=400&with_genres=${genreId}&page=${pageNum}`
+        });
       }
 
       if (mediaFilter !== 'movie') {
-        for (let page = 1; page <= pagesToFetch; page += 1) {
-          requestTargets.push({
-            type: 'tv',
-            url: `${API_BASE_URL}/discover/tv?language=en-US&sort_by=vote_average.desc&vote_count.gte=200&with_genres=${genreId}&page=${page}`
-          });
-        }
+        requestTargets.push({
+          type: 'tv',
+          url: `${API_BASE_URL}/discover/tv?language=en-US&sort_by=vote_average.desc&vote_count.gte=200&with_genres=${genreId}&page=${pageNum}`
+        });
       }
 
       const responses = await Promise.all(
         requestTargets.map(({ type, url }) =>
           axios.get(url, { headers: API_HEADERS }).then((res) => ({
             type,
-            results: res.data?.results || []
+            resData: res.data
           }))
         )
       );
 
-      const flattened = responses.flatMap(({ type, results }) =>
-        results.map((item) => ({ ...item, media_type: type }))
+      const flattened = responses.flatMap(({ type, resData }) =>
+        (resData.results || []).map((item) => ({ ...item, media_type: type }))
       );
+
+      let maxPages = 0;
+      responses.forEach(({ resData }) => {
+        if (resData.total_pages > maxPages) maxPages = resData.total_pages;
+      });
+
+      setHasMore(pageNum < maxPages && pageNum < 500);
 
       const uniqueMap = new Map();
       flattened.forEach((item) => {
@@ -198,18 +231,21 @@ const App = () => {
       const combinedResults = Array.from(uniqueMap.values())
         .sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
 
-      if (combinedResults.length === 0) {
+      if (combinedResults.length === 0 && pageNum === 1) {
         setErrorMessage('No media found for this genre.');
       }
 
-      setMediaList(combinedResults);
+      setMediaList(prev => pageNum === 1 ? combinedResults : [...prev, ...combinedResults]);
     } catch (error) {
       const message = error.response?.data?.status_message || error.message || 'Error fetching genre media.';
       console.error(`Error fetching genre media: ${message}`);
-      setErrorMessage(message);
-      setMediaList([]);
+      if (pageNum === 1) {
+        setErrorMessage(message);
+        setMediaList([]);
+      }
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
   }, [mediaFilter]);
 
@@ -255,25 +291,30 @@ const App = () => {
     .filter((media) => selectedGenre === 'all' || mediaHasGenre(media, Number(selectedGenre)));
 
   useEffect(() => {
-    fetchData();
     loadGenres();
-  }, [fetchData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     setSelectedGenre('all');
+    setPage(1);
   }, [mediaFilter]);
 
   useEffect(() => {
     loadTrendingMovies();
   }, [loadTrendingMovies]);
 
+  // Handle genre fetching or pagination
   useEffect(() => {
-    if (selectedGenre === 'all' || showWatchedOnly || searchTerm) {
-      return;
-    }
+    if (showWatchedOnly) return; // Watched list has no pages yet
 
-    fetchGenreMedia(selectedGenre);
-  }, [selectedGenre, mediaFilter, showWatchedOnly, searchTerm, fetchGenreMedia]);
+    if (selectedGenre !== 'all') {
+      fetchGenreMedia(selectedGenre, page);
+    } else {
+      // Fetch data for page 1 when genre is 'all', or when scrolling page > 1
+      fetchData(searchTerm, page);
+    }
+  }, [selectedGenre, showWatchedOnly, page, fetchGenreMedia, fetchData]); // Intentionally removed searchTerm from deps 
 
   // Fetch full TMDB details for all watched items when filter is toggled on
   useEffect(() => {
@@ -364,9 +405,10 @@ const App = () => {
               onChange={(e) => {
                 const nextGenre = e.target.value;
                 setSelectedGenre(nextGenre);
+                setPage(1);
 
                 if (nextGenre === 'all' && !showWatchedOnly && !searchTerm) {
-                  fetchData();
+                  fetchData('', 1);
                 }
               }}
               className="bg-dark-100 text-white border border-light-200/20 rounded-lg px-3 py-2 text-sm sm:text-base outline-none focus:border-blue-400"
@@ -385,15 +427,24 @@ const App = () => {
             <p className="error-message">{errorMessage}</p>
           ) : (
             <ul>
-              {filteredMediaList.map((media) => (
-                <MovieCard
-                  key={`${media.media_type}-${media.id}`}
-                  media={media}
-                  onClick={() => handleMediaClick(media)}
-                  isWatched={isSignedIn && isWatched(media.media_type, media.id)}
-                />
-              ))}
+              {filteredMediaList.map((media, index) => {
+                const isLast = index === filteredMediaList.length - 1;
+                return (
+                  <MovieCard
+                    ref={isLast ? lastMediaElementRef : null}
+                    key={`${media.media_type}-${media.id}`}
+                    media={media}
+                    onClick={() => handleMediaClick(media)}
+                    isWatched={isSignedIn && isWatched(media.media_type, media.id)}
+                  />
+                );
+              })}
             </ul>
+          )}
+          {isLoadingMore && (
+            <div className="mt-8 flex justify-center w-full">
+              <Spinner />
+            </div>
           )}
         </section>
 
