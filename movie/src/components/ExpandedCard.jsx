@@ -28,6 +28,9 @@ const ExpandedCard = ({ mediaId, mediaType, apiKey, onClose, isWatched, onToggle
   const [imdbId, setImdbId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedServer, setSelectedServer] = useState('imdb_su');
+  const [selectedSeason, setSelectedSeason] = useState(1);
+  const [selectedEpisode, setSelectedEpisode] = useState(1);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -38,6 +41,9 @@ const ExpandedCard = ({ mediaId, mediaType, apiKey, onClose, isWatched, onToggle
       setIsLoading(true);
       setError(null);
       setImdbId(null);
+      setSelectedServer('imdb_su');
+      setSelectedSeason(1);
+      setSelectedEpisode(1);
       if (!apiKey) {
         setError("API key is missing.");
         setIsLoading(false);
@@ -83,6 +89,42 @@ const ExpandedCard = ({ mediaId, mediaType, apiKey, onClose, isWatched, onToggle
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, []);
+
+  const servers = [
+    { id: 'imdb_su', name: 'imdb.su (Primary)' },
+    { id: 'vidlink_pro', name: 'VidLink.pro' },
+    { id: 'embed_su', name: 'Embed.su' },
+    { id: 'vidsrc_to', name: 'VidSrc.to' },
+    { id: 'vidsrc_cc', name: 'VidSrc.cc' },
+  ];
+
+  const getServerUrl = (serverId) => {
+    if (!imdbId) return '';
+    switch (serverId) {
+      case 'imdb_su':
+        return `https://imdb.su/title/${imdbId}/`;
+      case 'vidlink_pro':
+        return `https://vidlink.pro/${mediaType}/${mediaId}${mediaType === 'tv' ? `/${selectedSeason}/${selectedEpisode}` : ''}`;
+      case 'embed_su':
+        return `https://embed.su/embed/${mediaType}/${imdbId}${mediaType === 'tv' ? `/${selectedSeason}/${selectedEpisode}` : ''}`;
+      case 'vidsrc_to':
+        return `https://vidsrc.to/embed/${mediaType}/${imdbId}${mediaType === 'tv' ? `/${selectedSeason}/${selectedEpisode}` : ''}`;
+      case 'vidsrc_cc':
+        return `https://vidsrc.cc/v2/embed/${mediaType}/${imdbId}${mediaType === 'tv' ? `/${selectedSeason}/${selectedEpisode}` : ''}`;
+      default:
+        return `https://imdb.su/title/${imdbId}/`;
+    }
+  };
+
+  const handleSeasonChange = (e) => {
+    setSelectedSeason(Number(e.target.value));
+    setSelectedEpisode(1);
+  };
+
+  const seasonsList = details?.seasons || [];
+  const currentSeasonDetails = details?.seasons?.find(s => s.season_number === Number(selectedSeason));
+  const episodesCount = currentSeasonDetails ? currentSeasonDetails.episode_count : 0;
+  const episodesList = Array.from({ length: episodesCount }, (_, i) => i + 1);
 
   // Loading and Error states (no changes)
   const handleContentClick = (e) => e.stopPropagation();
@@ -140,19 +182,83 @@ const ExpandedCard = ({ mediaId, mediaType, apiKey, onClose, isWatched, onToggle
                   className="rounded-lg w-full shadow-lg border border-slate-800"
                 />
               </div>
-              <div className="lg:col-span-2 relative aspect-video bg-black rounded-lg flex items-center justify-center overflow-hidden">
-                {imdbId ? (
-                  <iframe
-                    src={`https://m.playimdb.com/title/${imdbId}/`}
-                    title={`Player for ${title}`}
-                    frameBorder="0"
-                    allowFullScreen
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full rounded-lg z-10"
-                  ></iframe>
-                ) : (
-                  <div className="text-gray-500">IMDb Player Not Available</div>
+              <div className="lg:col-span-2 flex flex-col gap-4">
+                {imdbId && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#0F0D23]/80 p-4 rounded-xl border border-[#23214a] backdrop-blur-xs">
+                    <div className="flex flex-col gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
+                        Select Server:
+                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        {servers.map((server) => (
+                          <button
+                            key={server.id}
+                            onClick={() => setSelectedServer(server.id)}
+                            className={`px-3 py-1 rounded-md text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer ${
+                              selectedServer === server.id
+                                ? 'bg-linear-to-r from-[#9b8ec4] to-[#3a7aad] text-white shadow-md shadow-blue-500/20'
+                                : 'bg-[#0A091A] border border-[#23214a] text-gray-400 hover:text-white hover:border-[#3a7aad]/50'
+                            }`}
+                          >
+                            {server.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {mediaType === 'tv' && selectedServer !== 'imdb_su' && details?.seasons && (
+                      <div className="flex items-center gap-3">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Season</label>
+                          <select
+                            value={selectedSeason}
+                            onChange={handleSeasonChange}
+                            className="bg-[#0A091A] border border-[#23214a] text-white rounded-lg px-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#3a7aad] cursor-pointer min-w-[80px]"
+                          >
+                            {seasonsList.map((s) => (
+                              <option key={s.id} value={s.season_number}>
+                                {s.name || `Season ${s.season_number}`}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Episode</label>
+                          <select
+                            value={selectedEpisode}
+                            onChange={(e) => setSelectedEpisode(Number(e.target.value))}
+                            className="bg-[#0A091A] border border-[#23214a] text-white rounded-lg px-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#3a7aad] cursor-pointer min-w-[80px]"
+                          >
+                            {episodesList.map((ep) => (
+                              <option key={ep} value={ep}>
+                                Episode {ep}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
+
+                <div className="relative aspect-video bg-black rounded-lg flex items-center justify-center overflow-hidden border border-[#23214a]">
+                  {imdbId ? (
+                    <iframe
+                      src={getServerUrl(selectedServer)}
+                      title={`Player for ${title}`}
+                      frameBorder="0"
+                      allowFullScreen
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full rounded-lg z-10"
+                    ></iframe>
+                  ) : (
+                    <div className="text-gray-500">IMDb Player Not Available</div>
+                  )}
+                </div>
               </div>
             </section>
 
