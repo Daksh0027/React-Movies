@@ -156,7 +156,7 @@ const ExpandedCard = ({ mediaId, mediaType, apiKey, onClose, isWatched, onToggle
       onClick={onClose}
     >
       <div
-        className="relative w-full sm:max-w-6xl sm:max-h-[92vh] sm:overflow-y-auto bg-[#0f0d23] sm:rounded-2xl text-white shadow-2xl"
+        className="relative w-full sm:max-w-7xl sm:max-h-[92vh] sm:overflow-y-auto bg-[#0f0d23] sm:rounded-2xl text-white shadow-2xl [scrollbar-width:thin] [scrollbar-color:#2a2850_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#2a2850] [&::-webkit-scrollbar-thumb]:rounded-full"
         onClick={handleContentClick}
       >
         {details && (
