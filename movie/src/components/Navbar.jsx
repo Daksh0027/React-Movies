@@ -26,17 +26,18 @@ const Navbar = ({ onHomeClick, mediaFilter, setMediaFilter, showWatchedOnly, set
     if (scrollToResults) scrollToResults();
   };
 
-  const activeClass = 'bg-blue-700 text-white';
-  const defaultClass = 'bg-transparent text-white hover:bg-blue-800/50 hover:text-blue-200';
+  const activeClass = 'bg-[#cecefb] text-[#0f0d23]';
+  const defaultClass = 'bg-transparent text-white hover:bg-white/10 hover:text-[#cecefb]';
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 w-full backdrop-blur-sm shadow-lg">
+    <nav className="fixed top-0 left-0 right-0 z-50 w-full bg-[#030014]/80 backdrop-blur-md border-b border-white/5">
       <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 max-w-7xl mx-auto">
         <button 
-          className="text-white text-xl sm:text-3xl font-bold hover:text-blue-200 transition-colors cursor-pointer bg-transparent border-none"
+          className="flex items-center gap-2.5 text-white text-xl sm:text-3xl font-bold hover:text-[#cecefb] transition-colors cursor-pointer bg-transparent border-none"
           onClick={handleHomeClick}
         >
-          🎞️ ReSpectro
+          <img src="/logo.png" alt="" className="h-7 w-7 sm:h-9 sm:w-9 object-contain" />
+          ReSpectro
         </button>
 
         {/* Mobile hamburger */}
@@ -51,13 +52,13 @@ const Navbar = ({ onHomeClick, mediaFilter, setMediaFilter, showWatchedOnly, set
         {/* Desktop nav */}
         <div className="hidden sm:flex gap-4 sm:gap-6 items-center">
           <button 
-            className={`text-base sm:text-lg font-medium transition-colors px-4 py-2 rounded-lg border-none cursor-pointer ${mediaFilter === 'movie' ? activeClass : defaultClass}`}
+            className={`text-base sm:text-lg font-medium transition-colors px-4 py-2 rounded-full border-none cursor-pointer ${mediaFilter === 'movie' ? activeClass : defaultClass}`}
             onClick={handleMoviesClick}
           >
             Movies
           </button>
           <button 
-            className={`text-base sm:text-lg font-medium transition-colors px-4 py-2 rounded-lg border-none cursor-pointer ${mediaFilter === 'tv' ? activeClass : defaultClass}`}
+            className={`text-base sm:text-lg font-medium transition-colors px-4 py-2 rounded-full border-none cursor-pointer ${mediaFilter === 'tv' ? activeClass : defaultClass}`}
             onClick={handleSeriesClick}
           >
             Series
@@ -65,7 +66,7 @@ const Navbar = ({ onHomeClick, mediaFilter, setMediaFilter, showWatchedOnly, set
           {isSignedIn ? (
             <>
               <button 
-                className={`text-base sm:text-lg font-medium transition-colors px-4 py-2 rounded-lg border-none cursor-pointer ${showWatchedOnly ? 'bg-green-600 text-white' : defaultClass}`}
+                className={`text-base sm:text-lg font-medium transition-colors px-4 py-2 rounded-full border-none cursor-pointer ${showWatchedOnly ? 'bg-green-600 text-white' : defaultClass}`}
                 onClick={() => setShowWatchedOnly(!showWatchedOnly)}
               >
                 Watched ({watchedCount})
@@ -75,12 +76,12 @@ const Navbar = ({ onHomeClick, mediaFilter, setMediaFilter, showWatchedOnly, set
           ) : (
             <div className="flex gap-2 items-center">
               <SignInButton mode="modal">
-                <button className="text-base font-medium px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white border-none cursor-pointer transition-colors">
+                <button className="text-base font-medium px-4 py-2 bg-[#cecefb] hover:bg-[#b9b7f5] rounded-full text-[#0f0d23] border-none cursor-pointer transition-colors">
                   Sign In
                 </button>
               </SignInButton>
               <SignUpButton mode="modal">
-                <button className="text-base font-medium px-4 py-2 bg-transparent hover:bg-blue-800/50 rounded-lg text-white border-none cursor-pointer transition-colors">
+                <button className="text-base font-medium px-4 py-2 bg-transparent hover:bg-white/10 rounded-full text-white border-none cursor-pointer transition-colors">
                   Sign Up
                 </button>
               </SignUpButton>
@@ -91,15 +92,15 @@ const Navbar = ({ onHomeClick, mediaFilter, setMediaFilter, showWatchedOnly, set
 
       {/* Mobile menu dropdown */}
       {menuOpen && (
-        <div className="sm:hidden flex flex-col gap-2 px-4 pb-4 bg-blue-900/95 border-t border-blue-800">
+        <div className="sm:hidden flex flex-col gap-2 px-4 pb-4 bg-[#0f0d23]/98 border-t border-white/10">
           <button 
-            className={`w-full text-left text-base font-medium transition-colors px-4 py-3 rounded-lg border-none cursor-pointer ${mediaFilter === 'movie' ? activeClass : defaultClass}`}
+            className={`w-full text-left text-base font-medium transition-colors px-4 py-3 rounded-full border-none cursor-pointer ${mediaFilter === 'movie' ? activeClass : defaultClass}`}
             onClick={() => { handleMoviesClick(); setMenuOpen(false); }}
           >
             Movies
           </button>
           <button 
-            className={`w-full text-left text-base font-medium transition-colors px-4 py-3 rounded-lg border-none cursor-pointer ${mediaFilter === 'tv' ? activeClass : defaultClass}`}
+            className={`w-full text-left text-base font-medium transition-colors px-4 py-3 rounded-full border-none cursor-pointer ${mediaFilter === 'tv' ? activeClass : defaultClass}`}
             onClick={() => { handleSeriesClick(); setMenuOpen(false); }}
           >
             Series
@@ -107,7 +108,7 @@ const Navbar = ({ onHomeClick, mediaFilter, setMediaFilter, showWatchedOnly, set
           {isSignedIn ? (
             <>
               <button 
-                className={`w-full text-left text-base font-medium transition-colors px-4 py-3 rounded-lg border-none cursor-pointer ${showWatchedOnly ? 'bg-green-600 text-white' : defaultClass}`}
+                className={`w-full text-left text-base font-medium transition-colors px-4 py-3 rounded-full border-none cursor-pointer ${showWatchedOnly ? 'bg-green-600 text-white' : defaultClass}`}
                 onClick={() => { setShowWatchedOnly(!showWatchedOnly); setMenuOpen(false); }}
               >
                 Watched ({watchedCount})
@@ -119,12 +120,12 @@ const Navbar = ({ onHomeClick, mediaFilter, setMediaFilter, showWatchedOnly, set
           ) : (
             <div className="flex gap-2 px-4 py-2">
               <SignInButton mode="modal">
-                <button className="text-base font-medium px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white border-none cursor-pointer transition-colors">
+                <button className="text-base font-medium px-4 py-2 bg-[#cecefb] hover:bg-[#b9b7f5] rounded-full text-[#0f0d23] border-none cursor-pointer transition-colors">
                   Sign In
                 </button>
               </SignInButton>
               <SignUpButton mode="modal">
-                <button className="text-base font-medium px-4 py-2 bg-transparent hover:bg-blue-800/50 rounded-lg text-white border-none cursor-pointer transition-colors">
+                <button className="text-base font-medium px-4 py-2 bg-transparent hover:bg-white/10 rounded-full text-white border-none cursor-pointer transition-colors">
                   Sign Up
                 </button>
               </SignUpButton>
