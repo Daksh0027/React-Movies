@@ -1,14 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense, memo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from './components/Navbar.jsx';
 import Search from './components/Search.jsx';
 import Spinner from './components/Spinner.jsx';
 import MovieCard from './components/MovieCard.jsx';
-import ExpandedCard from './components/ExpandedCard.jsx';
+
+// Lazy load ExpandedCard (only loads when user clicks a movie)
+const ExpandedCard = lazy(() => import('./components/ExpandedCard.jsx'));
 
 import { getTrendingMovies, updateSearchCount } from './appwrite.js';
 import { useUser } from '@clerk/clerk-react';
 import useWatched from './hooks/useWatched.js';
+import { dataCache } from './utils/cache.js';
+import { prefetchMediaDetails, prefetchVisibleImages, prefetchNextPage } from './utils/prefetch.js';
 
 
 const API_BASE_URL = 'https://api.themoviedb.org/3';
@@ -20,6 +25,9 @@ const API_HEADERS = {
 };
 
 const App = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -31,6 +39,7 @@ const App = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const [trendingMovies, setTrendingMovies] = useState([]);
+  const [topMovies, setTopMovies] = useState([]);
   
   // Filter: 'all' | 'movie' | 'tv'
   const [mediaFilter, setMediaFilter] = useState('all');
@@ -73,8 +82,27 @@ const App = () => {
     }, 150);
   };
 
-  // This function now fetches both movies and TV series
+  // This function now fetches both movies and TV series with aggressive caching
   const fetchData = useCallback(async (query = '', pageNum = 1) => {
+    // Check cache first
+    const cacheKey = `search-${query}-${mediaFilter}-${pageNum}`;
+    const cached = dataCache.get(cacheKey);
+    
+    if (cached) {
+      // Use cached data instantly
+      setMediaList(prev => pageNum === 1 ? cached.results : [...prev, ...cached.results]);
+      setHasMore(pageNum < cached.totalPages && pageNum < 500);
+      
+      // Prefetch images for cached results
+      prefetchVisibleImages(cached.results);
+      
+      // Prefetch next page in background
+      if (cached.results.length > 0) {
+        prefetchNextPage(query, pageNum, mediaFilter, API_KEY);
+      }
+      return;
+    }
+    
     if (pageNum === 1) {
       setIsLoading(true);
     } else {
@@ -89,10 +117,10 @@ const App = () => {
 
       const seriesEndpoint = query
         ? `${API_BASE_URL}/search/tv?query=${encodeURIComponent(query)}&page=${pageNum}`
-        : `${API_BASE_URL}/tv/top_rated?language=en-US&page=${pageNum}`; // sort by popularity descending is dumb
+        : `${API_BASE_URL}/tv/top_rated?language=en-US&page=${pageNum}`;
 
       // axios both movies and series together 
-      const [movieResponse, seriesResponse] = await Promise.all([ /* Promise.all for multiple request */
+      const [movieResponse, seriesResponse] = await Promise.all([
         axios.get(movieEndpoint,{headers: API_HEADERS}),
         axios.get(seriesEndpoint, {headers : API_HEADERS})
       ]);
@@ -107,6 +135,20 @@ const App = () => {
 
       const maxPages = Math.max(movieResponse.data.total_pages || 0, seriesResponse.data.total_pages || 0);
       setHasMore(pageNum < maxPages && pageNum < 500);
+
+      // Cache the results
+      dataCache.set(cacheKey, {
+        results: combinedResults,
+        totalPages: maxPages
+      });
+
+      // Prefetch images immediately
+      prefetchVisibleImages(combinedResults);
+      
+      // Prefetch next page in background
+      if (combinedResults.length > 0 && pageNum < maxPages) {
+        prefetchNextPage(query, pageNum, mediaFilter, API_KEY);
+      }
 
       if (combinedResults.length === 0 && pageNum === 1) {
         setErrorMessage('No movies or series found for your search.');
@@ -129,7 +171,7 @@ const App = () => {
       setIsLoading(false);
       setIsLoadingMore(false);
     }
-  }, [user?.id]);
+  }, [user?.id, mediaFilter]);
 
 
   const loadTrendingMovies = useCallback(async () => {
@@ -141,12 +183,36 @@ const App = () => {
     }
   }, [user?.id]);
 
+  const loadTopMovies = useCallback(async () => {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/movie/top_rated?language=en-US&page=1`,
+        { headers: API_HEADERS }
+      );
+      // Get top movies with highest vote average (more than 3 for carousel)
+      const topMovies = response.data.results
+        .filter(movie => movie.poster_path) // Only movies with posters
+        .slice(0, 12); // Get 12 movies for variety
+      setTopMovies(topMovies);
+    } catch (error) {
+      console.error(`Error fetching top movies: ${error}`);
+    }
+  }, []);
+
   // Updated handler to accept the full media object
   const handleMediaClick = (media) => {
-    setSelectedMedia({ id: media.id, type: media.media_type });
+    const mediaType = media.media_type;
+    const mediaId = media.id;
+    const title = (media.title || media.name || 'untitled').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    
+    // Navigate to the new URL
+    navigate(`/${mediaType}/${mediaId}/${title}`);
+    setSelectedMedia({ id: mediaId, type: mediaType });
   };
 
   const handleCloseModal = async () => {
+    // Navigate back to home
+    navigate('/');
     setSelectedMedia(null);
     setSearchTerm('');
     setSelectedGenre('all');
@@ -302,7 +368,22 @@ const App = () => {
 
   useEffect(() => {
     loadTrendingMovies();
-  }, [loadTrendingMovies]);
+    loadTopMovies();
+  }, [loadTrendingMovies, loadTopMovies]);
+
+  // Handle URL parameters - open modal if navigating directly to a media URL
+  useEffect(() => {
+    const pathMatch = location.pathname.match(/^\/(movie|tv)\/(\d+)/);
+    if (pathMatch) {
+      const [, mediaType, mediaId] = pathMatch;
+      setSelectedMedia({ id: parseInt(mediaId), type: mediaType });
+    } else {
+      // If we're on the home route and modal is open, close it
+      if (selectedMedia && location.pathname === '/') {
+        setSelectedMedia(null);
+      }
+    }
+  }, [location.pathname]); // Only depend on pathname
 
   // Handle genre fetching or pagination
   useEffect(() => {
@@ -361,7 +442,38 @@ const App = () => {
         <div className="pattern" />
         <div className="wrapper">
         <header>
-          <img src="./hero.png" alt="Hero Banner" />
+          {/* Continuous Scrolling Movie Carousel */}
+          <div className="hero-carousel-wrapper">
+            {topMovies.length > 0 ? (
+              <div className="hero-carousel-track">
+                {/* Duplicate the movies array twice for seamless infinite scroll */}
+                {[...topMovies, ...topMovies].map((movie, index) => (
+                  <div 
+                    key={`${movie.id}-${index}`}
+                    className="hero-carousel-item"
+                    onClick={() => handleMediaClick({ ...movie, media_type: 'movie' })}
+                  >
+                    <img
+                      src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
+                      alt={movie.title}
+                      className="hero-carousel-poster"
+                    />
+                    <div className="hero-carousel-overlay">
+                      <p className="hero-carousel-title">{movie.title}</p>
+                      <div className="hero-carousel-rating">
+                        <img src="/star.svg" alt="Rating" />
+                        <span>{movie.vote_average.toFixed(1)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="w-full h-80 mx-auto flex items-center justify-center">
+                <Spinner />
+              </div>
+            )}
+          </div>
           <h1>Find <span className="text-gradient">Movies And Series</span> You'll Enjoy Without the Hassle</h1>
           <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} onSearch={handleSearch} />
         </header>
@@ -435,6 +547,7 @@ const App = () => {
                     key={`${media.media_type}-${media.id}`}
                     media={media}
                     onClick={() => handleMediaClick(media)}
+                    onMouseEnter={() => prefetchMediaDetails(media.id, media.media_type, API_KEY)}
                     isWatched={isSignedIn && isWatched(media.media_type, media.id)}
                   />
                 );
@@ -448,16 +561,18 @@ const App = () => {
           )}
         </section>
 
-        {/* Pass media ID and type and API Key to the childern(ExpandedCard.jsx) */}
+        {/* Pass media ID and type and API Key to the children(ExpandedCard.jsx) */}
         {selectedMedia && (
-          <ExpandedCard 
-            mediaId={selectedMedia.id}
-            mediaType={selectedMedia.type} 
-            apiKey={API_KEY} 
-            onClose={handleCloseModal}
-            isWatched={isSignedIn && isWatched(selectedMedia.type, selectedMedia.id)}
-            onToggleWatched={isSignedIn ? toggleWatched : null}
-          />
+          <Suspense fallback={<Spinner />}>
+            <ExpandedCard 
+              mediaId={selectedMedia.id}
+              mediaType={selectedMedia.type} 
+              apiKey={API_KEY} 
+              onClose={handleCloseModal}
+              isWatched={isSignedIn && isWatched(selectedMedia.type, selectedMedia.id)}
+              onToggleWatched={isSignedIn ? toggleWatched : null}
+            />
+          </Suspense>
         )}
       </div>
     </main>

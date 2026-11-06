@@ -1,6 +1,6 @@
-import React from 'react'
+import React, { memo } from 'react'
 
-const Search = ({ searchTerm, setSearchTerm, onSearch }) => {
+const Search = memo(({ searchTerm, setSearchTerm, onSearch }) => {
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
       onSearch();
@@ -10,7 +10,7 @@ const Search = ({ searchTerm, setSearchTerm, onSearch }) => {
   return (
     <div className="search">
       <div>
-        <img src="search.svg" alt="search" />
+        <img src="search.svg" alt="search" loading="lazy" />
 
         <input
           type="text"
@@ -29,5 +29,8 @@ const Search = ({ searchTerm, setSearchTerm, onSearch }) => {
       </div>
     </div>
   )
-}
+});
+
+Search.displayName = 'Search';
+
 export default Search

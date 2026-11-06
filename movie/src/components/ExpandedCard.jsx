@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 import Spinner from './Spinner';
 import axios from 'axios';
 import { SignInButton } from '@clerk/clerk-react';
+import { dataCache } from '../utils/cache';
 
-// Helper functions (no changes)
+// Helper functions (memoized outside component to avoid recreation)
 const formatCurrency = (number) => {
   if (number > 0) {
     return new Intl.NumberFormat('en-US', {
@@ -23,25 +24,36 @@ const formatRuntime = (minutes) => {
 };
 
 // Component definition (no changes to props or logic)
-const ExpandedCard = ({ mediaId, mediaType, apiKey, onClose, isWatched, onToggleWatched }) => {
+const ExpandedCard = memo(({ mediaId, mediaType, apiKey, onClose, isWatched, onToggleWatched }) => {
   const [details, setDetails] = useState(null);
   const [imdbId, setImdbId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedServer, setSelectedServer] = useState('imdb_su');
+  const [selectedServer, setSelectedServer] = useState('vidsrc_pro');
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [selectedEpisode, setSelectedEpisode] = useState(1);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     const fetchDetails = async () => {
-      // ... a lot of code
-      // This entire data fetching useEffect hook remains exactly the same
-      // ...
+      // Check cache first for INSTANT loading!
+      const cacheKey = `details-${mediaType}-${mediaId}`;
+      const cached = dataCache.get(cacheKey);
+      
+      if (cached) {
+        // INSTANT LOAD from cache - no loading state!
+        setDetails(cached);
+        if (cached.external_ids?.imdb_id) {
+          setImdbId(cached.external_ids.imdb_id);
+        }
+        setIsLoading(false);
+        return;
+      }
+      
       setIsLoading(true);
       setError(null);
       setImdbId(null);
-      setSelectedServer('imdb_su');
+      setSelectedServer('vidsrc_pro');
       setSelectedSeason(1);
       setSelectedEpisode(1);
       if (!apiKey) {
@@ -58,6 +70,10 @@ const ExpandedCard = ({ mediaId, mediaType, apiKey, onClose, isWatched, onToggle
         const response = await axios(url,{headers : API_HEADERS} );
 
         const data = response.data;
+        
+        // CACHE IMMEDIATELY for future instant access
+        dataCache.set(cacheKey, data);
+        
         setDetails(data);
         if (data.external_ids?.imdb_id) {
           setImdbId(data.external_ids.imdb_id);
@@ -91,16 +107,30 @@ const ExpandedCard = ({ mediaId, mediaType, apiKey, onClose, isWatched, onToggle
   }, []);
 
   const servers = [
-    { id: 'imdb_su', name: 'imdb.su (Primary)' },
+    { id: 'vidsrc_pro', name: 'VidSrc Pro (Primary)' },
+    { id: 'vidsrc_xyz', name: 'VidSrc.xyz' },
+    { id: 'imdb_su', name: 'imdb.su' },
     { id: 'vidlink_pro', name: 'VidLink.pro' },
     { id: 'embed_su', name: 'Embed.su' },
     { id: 'vidsrc_to', name: 'VidSrc.to' },
     { id: 'vidsrc_cc', name: 'VidSrc.cc' },
+    { id: 'vidsrc_me', name: 'VidSrc.me' },
+    { id: 'vidsrc_net', name: 'VidSrc.net' },
+    { id: 'vidsrc_icu', name: 'VidSrc.icu' },
+    { id: '2embed', name: '2embed.cc' },
+    { id: 'moviesapi', name: 'MoviesAPI' },
+    { id: 'smashystream', name: 'SmashyStream' },
+    { id: 'autoembed', name: 'AutoEmbed' },
+    { id: 'multiembed', name: 'MultiEmbed' },
   ];
 
   const getServerUrl = (serverId) => {
     if (!imdbId) return '';
     switch (serverId) {
+      case 'vidsrc_pro':
+        return `https://vidsrc.pro/embed/${mediaType}/${imdbId}${mediaType === 'tv' ? `/${selectedSeason}-${selectedEpisode}` : ''}`;
+      case 'vidsrc_xyz':
+        return `https://vidsrc.xyz/embed/${mediaType}/${imdbId}${mediaType === 'tv' ? `/${selectedSeason}-${selectedEpisode}` : ''}`;
       case 'imdb_su':
         return `https://imdb.su/title/${imdbId}/`;
       case 'vidlink_pro':
@@ -111,8 +141,24 @@ const ExpandedCard = ({ mediaId, mediaType, apiKey, onClose, isWatched, onToggle
         return `https://vidsrc.to/embed/${mediaType}/${imdbId}${mediaType === 'tv' ? `/${selectedSeason}/${selectedEpisode}` : ''}`;
       case 'vidsrc_cc':
         return `https://vidsrc.cc/v2/embed/${mediaType}/${imdbId}${mediaType === 'tv' ? `/${selectedSeason}/${selectedEpisode}` : ''}`;
+      case 'vidsrc_me':
+        return `https://vidsrc.me/embed/${mediaType}/${imdbId}${mediaType === 'tv' ? `/${selectedSeason}-${selectedEpisode}` : ''}`;
+      case 'vidsrc_net':
+        return `https://vidsrc.net/embed/${mediaType}/${imdbId}${mediaType === 'tv' ? `?season=${selectedSeason}&episode=${selectedEpisode}` : ''}`;
+      case 'vidsrc_icu':
+        return `https://vidsrc.icu/embed/${mediaType}/${imdbId}${mediaType === 'tv' ? `/${selectedSeason}-${selectedEpisode}` : ''}`;
+      case '2embed':
+        return `https://www.2embed.cc/embed/${imdbId}${mediaType === 'tv' ? `&s=${selectedSeason}&e=${selectedEpisode}` : ''}`;
+      case 'moviesapi':
+        return `https://moviesapi.club/${mediaType}/${imdbId}${mediaType === 'tv' ? `-${selectedSeason}-${selectedEpisode}` : ''}`;
+      case 'smashystream':
+        return `https://embed.smashystream.com/playere.php?tmdb=${mediaId}${mediaType === 'tv' ? `&season=${selectedSeason}&episode=${selectedEpisode}` : ''}`;
+      case 'autoembed':
+        return `https://player.autoembed.cc/embed/${mediaType}/${imdbId}${mediaType === 'tv' ? `/${selectedSeason}/${selectedEpisode}` : ''}`;
+      case 'multiembed':
+        return `https://multiembed.mov/?video_id=${imdbId}${mediaType === 'tv' ? `&s=${selectedSeason}&e=${selectedEpisode}` : ''}`;
       default:
-        return `https://imdb.su/title/${imdbId}/`;
+        return `https://vidsrc.pro/embed/${mediaType}/${imdbId}`;
     }
   };
 
@@ -209,7 +255,7 @@ const ExpandedCard = ({ mediaId, mediaType, apiKey, onClose, isWatched, onToggle
                       </div>
                     </div>
 
-                    {mediaType === 'tv' && selectedServer !== 'imdb_su' && details?.seasons && (
+                    {mediaType === 'tv' && !['vidsrc_pro', 'vidsrc_xyz', 'imdb_su'].includes(selectedServer) && details?.seasons && (
                       <div className="flex items-center gap-3">
                         <div className="flex flex-col gap-1">
                           <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Season</label>
@@ -345,6 +391,8 @@ const ExpandedCard = ({ mediaId, mediaType, apiKey, onClose, isWatched, onToggle
       </div>
     </div>
   );
-};
+});
+
+ExpandedCard.displayName = 'ExpandedCard';
 
 export default ExpandedCard;

@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { UserButton, SignInButton, SignUpButton } from '@clerk/clerk-react';
 
-const Navbar = ({ onHomeClick, mediaFilter, setMediaFilter, showWatchedOnly, setShowWatchedOnly, watchedCount, isSignedIn, scrollToResults }) => {
+const Navbar = memo(({ onHomeClick, mediaFilter, setMediaFilter, showWatchedOnly, setShowWatchedOnly, watchedCount, isSignedIn, scrollToResults }) => {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleHomeClick = async () => {
@@ -134,6 +134,8 @@ const Navbar = ({ onHomeClick, mediaFilter, setMediaFilter, showWatchedOnly, set
       )}
     </nav>
   );
-};
+});
+
+Navbar.displayName = 'Navbar';
 
 export default Navbar;

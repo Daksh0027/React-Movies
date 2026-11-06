@@ -48,12 +48,118 @@
     @apply min-h-screen relative bg-primary;
   }
 
+  nav {
+    z-index: 9999 !important;
+  }
+
   header {
     @apply sm:mt-10 mt-16;
+    position: relative;
+    z-index: 1;
   }
 
   header img {
     @apply w-full max-w-lg h-auto object-contain mx-auto drop-shadow-md flex items-center;
+  }
+
+  /* Continuous Scrolling Carousel */
+  .hero-carousel-wrapper {
+    @apply w-full overflow-hidden relative mb-16;
+    height: 320px;
+    mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+    contain: layout style paint;
+  }
+
+  .hero-carousel-track {
+    @apply flex gap-6 absolute left-0;
+    animation: scroll 40s linear infinite;
+    will-change: transform;
+    transform: translateZ(0); /* Force GPU acceleration */
+  }
+
+  @keyframes scroll {
+    0% {
+      transform: translate3d(0, 0, 0);
+    }
+    100% {
+      transform: translate3d(-50%, 0, 0);
+    }
+  }
+
+  .hero-carousel-track:hover {
+    animation-play-state: paused;
+  }
+
+  .hero-carousel-item {
+    @apply relative flex-shrink-0 rounded-xl overflow-hidden shadow-2xl cursor-pointer transition-transform duration-300;
+    width: 220px;
+    height: 320px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    backface-visibility: hidden;
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  .hero-carousel-item:hover {
+    transform: scale(1.05) translateZ(0);
+    z-index: 10;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+  }
+
+  .hero-carousel-poster {
+    @apply w-full h-full object-cover;
+  }
+
+  .hero-carousel-overlay {
+    @apply absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-4 opacity-0 transition-opacity duration-300;
+    will-change: opacity;
+  }
+
+  .hero-carousel-item:hover .hero-carousel-overlay {
+    @apply opacity-100;
+  }
+
+  .hero-carousel-title {
+    @apply text-white font-bold text-base mb-2 line-clamp-2;
+  }
+
+  .hero-carousel-rating {
+    @apply flex items-center gap-2 text-white text-sm;
+  }
+
+  .hero-carousel-rating img {
+    @apply w-4 h-4;
+  }
+
+  /* Accessibility: Respect user's motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    .hero-carousel-track {
+      animation-play-state: paused;
+    }
+    
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .hero-carousel-wrapper {
+      @apply mb-12;
+      height: 240px;
+    }
+
+    .hero-carousel-item {
+      width: 160px;
+      height: 240px;
+    }
+
+    .hero-carousel-track {
+      @apply gap-4;
+      animation: scroll 30s linear infinite;
+    }
   }
 }
 
@@ -108,9 +214,11 @@
 
   .movie-card {
     @apply bg-dark-100 p-5 rounded-2xl shadow-inner shadow-light-100/10;
+    contain: layout style paint;
 
     & img {
       @apply rounded-lg h-auto w-full;
+      content-visibility: auto;
     }
 
     & h3 {

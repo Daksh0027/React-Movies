@@ -1,4 +1,5 @@
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
 import { ClerkProvider } from '@clerk/clerk-react'
@@ -41,7 +42,12 @@ const clerkAppearance = {
 }
 
 createRoot(document.getElementById('root')).render(
-  <ClerkProvider publishableKey={PUBLISHABLE_KEY} appearance={clerkAppearance}>
-    <App />
-  </ClerkProvider>
+  <BrowserRouter>
+    <ClerkProvider publishableKey={PUBLISHABLE_KEY} appearance={clerkAppearance}>
+      <Routes>
+        <Route path="/" element={<App />} />
+        <Route path="/:mediaType/:mediaId/*" element={<App />} />
+      </Routes>
+    </ClerkProvider>
+  </BrowserRouter>
 )

@@ -1,12 +1,17 @@
-import { forwardRef } from 'react';
+import { forwardRef, memo } from 'react';
 
-const MovieCard = forwardRef(({ media, onClick, isWatched }, ref) => {
+const MovieCard = memo(forwardRef(({ media, onClick, isWatched, onMouseEnter }, ref) => {
   // Destructure properties, handling differences between movies and TV series
   const { vote_average, poster_path, original_language } = media;
   const title = media.title || media.name;
   const releaseDate = media.release_date || media.first_air_date; // if movie release date or series first air date 
   return (
-    <div ref={ref} className="movie-card cursor-pointer relative" onClick={onClick}>
+    <div 
+      ref={ref} 
+      className="movie-card cursor-pointer relative" 
+      onClick={onClick}
+      onMouseEnter={onMouseEnter}
+    >
       {isWatched && (
         <div className="absolute top-2 left-2 z-10 bg-green-600 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
           <span>✓</span> Watched
@@ -16,6 +21,8 @@ const MovieCard = forwardRef(({ media, onClick, isWatched }, ref) => {
         src={poster_path ?
           `https://image.tmdb.org/t/p/w500/${poster_path}` : '/No-Poster.png'}
         alt={title}
+        loading="lazy"
+        decoding="async"
       />
 
       <div className="mt-4">
@@ -23,7 +30,7 @@ const MovieCard = forwardRef(({ media, onClick, isWatched }, ref) => {
 
         <div className="content">
           <div className="rating">
-            <img src="/star.svg" alt="Rating" />
+            <img src="/star.svg" alt="Rating" loading="lazy" />
             <p>{vote_average ? vote_average.toFixed(1) : 'N/A'}</p>
           </div>
 
@@ -38,6 +45,8 @@ const MovieCard = forwardRef(({ media, onClick, isWatched }, ref) => {
       </div>
     </div>
   );
-});
+}));
+
+MovieCard.displayName = 'MovieCard';
 
 export default MovieCard;
