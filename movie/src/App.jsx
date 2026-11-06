@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense, memo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from './components/Navbar.jsx';
@@ -493,7 +493,7 @@ const App = () => {
                 >
                   <p>{index + 1}</p>
                   <div className="flex flex-col items-center -ml-3.5 shrink-0">
-                    <div className="relative w-28 h-40 sm:w-40 sm:h-56 rounded-lg overflow-hidden shadow-lg border border-slate-800 bg-dark-100 transition-transform hover:scale-105">
+                    <div className="relative w-28 h-40 sm:w-40 sm:h-56 rounded-lg overflow-hidden shadow-lg border border-white/10 bg-dark-100 transition-all duration-300 hover:scale-105 hover:border-white/25">
                       <img
                         src={movie.poster_url}
                         alt={movie.searchTerm}
@@ -523,7 +523,7 @@ const App = () => {
                   fetchData('', 1);
                 }
               }}
-              className="bg-dark-100 text-white border border-light-200/20 rounded-lg px-3 py-2 text-sm sm:text-base outline-none focus:border-blue-400"
+              className="bg-dark-100 text-white border border-white/10 rounded-full px-4 py-2 text-sm sm:text-base outline-none focus:border-[#cecefb]/50 cursor-pointer"
             >
               <option value="all">All Genres</option>
               {genreOptions.map((genre) => (
@@ -537,6 +537,8 @@ const App = () => {
             <Spinner />
           ) : errorMessage ? (
             <p className="error-message">{errorMessage}</p>
+          ) : filteredMediaList.length === 0 ? (
+            <p className="error-message">Nothing matches these filters yet. Try another genre or media type.</p>
           ) : (
             <ul>
               {filteredMediaList.map((media, index) => {
