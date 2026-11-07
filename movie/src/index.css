@@ -70,7 +70,7 @@
   }
 
   main {
-    @apply min-h-screen relative bg-primary;
+    @apply min-h-screen relative bg-transparent;
   }
 
   nav {
@@ -162,11 +162,15 @@
     .hero-carousel-track {
       animation-play-state: paused;
     }
-    
+
     * {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
+    }
+
+    body::before {
+      animation-play-state: paused;
     }
   }
 
@@ -189,8 +193,24 @@
 }
 
 @layer components {
-  .pattern {
-    @apply bg-hero-pattern w-full h-screen bg-center bg-cover absolute z-0;
+  .bg-animated {
+    @apply fixed inset-0 z-0;
+    background-image: var(--background-image-hero-pattern);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    animation: bgZoom 18s ease-in-out infinite;
+    will-change: transform;
+    pointer-events: none;
+  }
+
+  @keyframes bgZoom {
+    0%, 100% {
+      transform: scale(1) translate(0, 0);
+    }
+    50% {
+      transform: scale(1.15) translate(-3%, -2%);
+    }
   }
 
   .wrapper {

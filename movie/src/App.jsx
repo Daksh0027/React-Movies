@@ -439,7 +439,7 @@ const App = () => {
         }} />
       )}
       <main>
-        <div className="pattern" />
+        <div className="bg-animated" />
         <div className="wrapper">
         <header>
           {/* Continuous Scrolling Movie Carousel */}
